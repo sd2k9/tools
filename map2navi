@@ -1,0 +1,206 @@
+#!/bin/bash
+# Puts a route to GPS Handheld
+# The route is simplified to contain less points on the way
+#
+# This software is beta, use at your own risk! (I do regularily, btw)
+# Please update the settings below "Settungs" to suit your needs
+#
+# TODO
+# - currently nothing open
+#
+#      Version: $LastChangedRevision$
+#  last change: $LastChangedDate$
+#  (c) by Robert Lange (robert.lange@s1999.tu-chemnitz.de)
+#  GNU General Public Licence applies
+#
+
+# *** Settings ***
+# Simplification algorithm: Remove points in the range of 10m
+#                           deviation from projected line
+SIMPLIFY="crosstrack,error=0.010k"
+# Simplification algorithm: Reduce to 300 points
+# SIMPLIFY="count=300"
+# see gpsbabel documentation for details
+# GPS Device, as supported by gpsbabel
+GPS_TYPE="garmin"
+# GPS Port - last system port available (== last connected)
+GPS_PORT=
+
+
+# *** Settings you usually don't wanna change ***
+# GPSbabel executable
+GPSBABEL=gpsbabel
+# wget executable
+WGET=wget
+
+# Program name (no need to change)
+PROGNAME=map2navi
+# Route name (set from command line)
+ROUTENAME=
+# URL/GPX File (set from command line)
+URL_GPX=
+
+# StdOut mode: True when defined (needed for etrex30)
+STDOUT_MODE=
+
+# *** Functions ***
+get_gps_port() {
+# GPS Port - last system port available (== last connected)
+GPS_PORT=$(ls -1 /dev/ttyUSB* | tail -n 1)
+}
+# *** Command line parsing
+get_options() {
+  local opt
+  local argcounter=1
+
+  while [ -n "$*" ] ; do
+      opt="$1"
+      shift
+      case $opt in
+          -V|--version)
+          # Version output
+          REVISION='$LastChangedRevision: DEV$'
+          REVISION=${REVISION#\$LastChangedRevision: }
+          REVISION=${REVISION%\$}
+          echo "$PROGNAME, Revision $REVISION"
+          echo "(c) by Robert Lange (robert.lange@s1999.tu-chemnitz.de)"
+          echo "GNU General Public Licence applies"
+          exit 0
+          ;;
+          -h|--help|'-?')
+          # help text
+          echo "$PROGNAME - Put a route to GPS Handheld"
+          echo
+          echo "The route is simplified to contain less points on the way"
+	  echo "Performed steps: Fetch route, convert to gpx, store on device"
+	  echo "Used programs: gpsbabel, wget"
+	  echo "Input can be a Google Maps URL or a GPX file,"
+          echo "e.g. from http://openrouteservice.de/"
+          echo
+          echo "Google Maps Limitation: Currently only one start point and"
+          echo "   one end point can be used - via points are allowed but"
+	  echo "   not multiple waypoints. To change waypoints to vias in the"
+	  echo "   URL just modify or add a \"&via=1,2,3,4,5...\""
+          echo
+          echo "Call: $PROGNAME [OPTS] route_name {'url'|file.gpx}"
+          echo
+          echo "Options:"
+          echo "  [-h|--help] - This screen"
+          echo "  [-V|--version] - Print program version and exit"
+          echo "  route_name - Name of the resulting route"
+          echo "  url - Google Maps URL from the \"Link\" button"
+          echo "        Don't forget to quote this URL"
+          echo "  file.gpx - GPX file containing a track (called \"Route\","
+          echo "             must end in .gpx"
+          exit 0
+	  ;;
+          '--stdout')
+          # Standard output mode
+          STDOUT_MODE=1
+          ;;
+          *)
+          # Store into 
+     	  case $argcounter in
+      	    1)
+      		ROUTENAME=$opt
+      		;;
+      	    2)
+      		URL_GPX=$opt
+      		;;
+      	    *)
+                  # Too many arguments
+  	        echo "Too many arguments! See help text for usage"
+  		exit 1
+  		;;
+      	  esac
+          #increment argument counter
+          let argcounter++
+      	;;
+      esac
+  done
+}
+
+# *** Call Command Line Parsing
+# When no options supplied then call help
+if [ -z "$1" ]; then
+    get_options "--help"
+else
+    get_options "$@"
+fi
+
+# *** Sanity Checks ***
+# Parameter
+if [ -z "$URL_GPX" ]; then
+   echo "No URL or file suppled! See help text for usage"
+   exit 1
+fi
+# gpsbabel there?
+if [ $(which $GPSBABEL > /dev/null) ]; then
+   echo "$GPSBABEL executable not found!"
+   exit 1
+fi
+# wget there?
+if [ $(which $WGET > /dev/null) ]; then
+   echo "$WGET executable not found!"
+   exit 1
+fi
+
+if [ ${URL_GPX##*.} != "gpx" ]; then
+   # *** For URL: Fetch Google MAPs URL to String
+   [ -z "$STDOUT_MODE" ] && \
+        echo "$WGET -o /dev/null -O - ${URL_GPX}&output=kml"
+   KMLFILE="$($WGET -o /dev/null -O - ${URL_GPX}\&output=kml)"
+   if [ $? -ne 0 ]; then
+      echo "Failure invoking $WGET - Aborting"
+      exit 1
+   fi
+   # *** For URL: Convert & Simplify KML
+   [ -z "$STDOUT_MODE" ] && \
+        echo $GPSBABEL -i kml -f - -x simplify,$SIMPLIFY -o gpx -F -
+   GPXFILE=$($GPSBABEL -i kml -f - -x simplify,$SIMPLIFY -o gpx -F - <<< "$KMLFILE" )
+   if [ $? -ne 0 ]; then
+      echo "Failure invoking $GPSBABEL - Aborting"
+      exit 1
+   fi
+
+# *** For GPX: Simplify GPX
+else
+   [ -z "$STDOUT_MODE" ] && \
+     echo $GPSBABEL -i gpx -f $URL_GPX -x simplify,$SIMPLIFY -o gpx -F -
+  GPXFILE="$($GPSBABEL -i gpx -f $URL_GPX -x simplify,$SIMPLIFY -o gpx -F -)"
+  if [ $? -ne 0 ]; then
+     echo "Failure invoking $GPSBABEL - Aborting"
+     exit 1
+  fi
+fi
+
+
+# *** Rename route
+# Old: But now the "Route" string is dynamic
+# GPXFILE=${GPXFILE//<name>Route<\/name>/<name>${ROUTENAME}<\/name>}
+ GPXFILE=$(perl -ne "s|<trk>\s*<name>.*?</name>|<trk><name>${ROUTENAME}</name>|; print;" <<<$GPXFILE)
+
+# *** Store to GPS Handheld
+if [ -z "$STDOUT_MODE" ]; then
+   # Direct download
+   # Fetch the GPS port to use
+   get_gps_port
+   echo -n "The track contains "
+   echo -n $(sed -e "s|</trkpt>|\n|g"  <<< "$GPXFILE" | wc -l)
+   echo " points"
+   # Debug echo "$GPXFILE" > g.gpx
+
+  echo $GPSBABEL -D 1 -t -i gpx -f - -o $GPS_TYPE -F $GPS_PORT
+  $GPSBABEL -D 1 -t -i gpx -f - -o $GPS_TYPE -F $GPS_PORT <<< "$GPXFILE"
+  if [ $? -ne 0 ]; then
+     echo "Failure invoking $GPSBABEL - Aborting"
+     exit 1
+  fi
+  # *** Done
+  echo
+  echo "Done - Downloaded track \"$ROUTENAME\" to $GPS_TYPE"
+  echo
+else
+   # STDOUT output
+  $GPSBABEL -D 0 -t -i gpx -f - -o gpx -F - <<< "$GPXFILE"
+fi

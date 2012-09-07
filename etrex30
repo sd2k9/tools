@@ -1,0 +1,313 @@
+#!/bin/bash
+# Wrapper für Garmin etrex 30
+#
+#      Version: $LastChangedRevision$
+#  last change: $LastChangedDate$
+#  (c) by Robert Lange (robert.lange@s1999.tu-chemnitz.de)
+#  GNU General Public Licence applies
+
+
+# *** Settings ***
+# Garmin Mount Point
+MNT=/media/GARMIN
+MNT_GPX="$MNT/Garmin/GPX"
+MNT_OSM="$MNT/Garmin"
+
+# Test mode: True when defined (only echo commands)
+TESTMODE=
+
+# Selected Command (see help)
+COMMAND_MODE=
+# Option to Command (2nd parameter)
+COMMAND_1P=
+# Option to Command (3nd parameter)
+COMMAND_2P=
+# Option to Command (4nd parameter)
+COMMAND_3P=
+
+# GPSbabel executable
+GPSBABEL=gpsbabel
+# Map2Navi executable
+MAP2NAVI=map2navi
+# mkgmap executable
+MKGMAP=mkgmap
+# Created map file by mkgmap
+MKGMAP_OUT="gmapsupp.img"
+
+# *** Funktionen ***
+
+# *** General message pop up
+# 1.P: Message
+# msg_pop_up() {
+#    local msg
+#    msg="$1"
+#    shift
+
+# tool there?
+tool_there() {
+  local cmd
+  cmd="$1"
+  shift
+  if [ $(which $cmd > /dev/null) ]; then
+   echo "$cmd executable not found!"
+   exit 1
+  fi
+}
+# Execute this tool
+exec_tool() {
+   echo "$@"
+   if [ -z "$TESTMODE" ]; then
+       eval "$@"
+       ERR=$?
+       if [ $ERR -ne 0 ]; then
+	   echo "Program execution failed with error code $ERR!"
+	   exit 1
+       fi
+   fi
+}
+# gpx Mount Point there?
+gpx_mount_point_there() {
+  if [ ! -d "$MNT_GPX" ]; then
+   echo "GPX/ mount point below $MNT_GPX not found!"
+   # Ignore in testmode
+   [ -z "$TESTMODE" ] && exit 1
+  fi
+}
+
+# Does this file already exists?
+check_file_existence() {
+  local fil
+  fil="$1"
+  shift
+  if [ -f "$fil" ]; then
+   echo "File $fil already exists! Move away manually!"
+   # Ignore in testmode
+   [ -z "$TESTMODE" ] && exit 1
+  fi
+}
+
+
+# *** Kommandozeile auswerten
+get_options() {
+  local opt
+  local argcounter=1
+
+  while [ -n "$*" ] ; do
+      opt="$1"
+      shift
+      case $opt in
+          -t|--test)
+          # Test Mode
+       	  TESTMODE=1
+      	;;
+          -V|--version)
+          # Version output
+          REVISION='$LastChangedRevision: DEV $'
+          REVISION=${REVISION#\$LastChangedRevision: }
+          REVISION=${REVISION%\$}
+          echo "etrex30, Revision $REVISION"
+          echo "(c) by Robert Lange (robert.lange@s1999.tu-chemnitz.de)"
+          exit 0
+          ;;
+          -h|--help|'-?')
+          # Hilfetext
+          echo "etrex30 - Wrapper around various Garmin etrex 30 Tasks"
+          echo
+          echo "Call: etrex30 command options"
+          echo
+          echo "General Options:"
+          echo "     [-t|--test] - Do not execute commands, only echo"
+          echo "  [-V|--version] - Print program version and exit"
+          echo
+          echo "Download a GPS Track"
+	  echo "  Command: (put)track routename gpx_or_google_maps_url"
+	  echo "  Downloads the specified route file to the GPS"
+	  echo "  Conversion is done with ${MAP2NAVI}"
+          echo
+          echo "Download a list of points"
+	  echo "  Command: (put)points points.csv"
+	  echo "  Downloads the specified points to the GPS"
+	  echo "  Format of points.csv:"
+	  echo "  latitude, longitude, Name"
+	  echo "  Conversion is done with ${GPSBABEL}"
+	  echo
+          echo "Download a OSM Map"
+	  echo "  Command: (put)osm map.osm[.xz] title shorttitle"
+	  echo "  Downloads the specified OSM Map file to the GPS by the name gmap_<shorttitle>.img"
+	  echo "  with the supplied title and the map file name on the device."
+	  echo "  The input OSM file can be compressed with xz."
+	  echo "  Conversion is done with ${MKGMAP}"
+          exit 0
+        ;;
+          *)
+          # Else store into COMMAND*
+     	  case $argcounter in
+      	    1)
+      		COMMAND_MODE="$opt"
+      		;;
+      	    2)
+      		COMMAND_1P="$opt"
+      		;;
+      	    3)
+      		COMMAND_2P="$opt"
+      		;;
+      	    4)
+      		COMMAND_3P="$opt"
+      		;;
+      	    *)
+                  # Too many arguments
+  	        echo "Too many arguments! See help text for usage"
+  		exit 1
+  		;;
+      	  esac
+          #increment argument counter
+          let argcounter++
+      	;;
+      esac
+  done
+}
+
+# *** Call Command Line Parsing
+# When no options supplied then call help
+if [ -z "$1" ]; then
+    get_options "--help"
+else
+    get_options "$@"
+fi
+
+# echo $COMMAND_MODE
+# *** Select working mode ***
+case "$COMMAND_MODE" in
+# *** Trackdownload
+track|puttrack)
+   # Check for map2navi
+   tool_there "$MAP2NAVI"
+
+   # Check for GPX Mount point
+   gpx_mount_point_there
+   # Does the input parameters exists?
+   if [ -z "$COMMAND_2P" ]; then
+     echo "No options supplied to command!"
+     exit 1
+    fi
+
+   # Convert using map2navi
+   echo "$MAP2NAVI --stdout $COMMAND_1P $COMMAND_2P"
+   GPXFILE=$($MAP2NAVI --stdout "$COMMAND_1P" "$COMMAND_2P")
+   ERR=$?
+   if [ $ERR -ne 0 ]; then
+       echo "Program execution failed with error code $ERR!"
+       exit 1
+   fi
+
+   # Download to GPX with routename date
+   GPX_STORE_FILE="$MNT_GPX/${COMMAND_1P}.gpx"
+   check_file_existence "$GPX_STORE_FILE"
+   echo "Writing points to file $GPX_STORE_FILE"
+   # Not in testmode
+   [ -z "$TESTMODE" ] && cat <<< "$GPXFILE" >> "$GPX_STORE_FILE"
+   # Debug
+   # echo "---"
+   # cat <<< $GPXFILE
+   # echo "---"
+   ;;
+
+# *** Pointdownload
+points|putpoints)
+   # Check for gpsbabel
+   tool_there $GPSBABEL
+   # Check for GPX Mount point
+   gpx_mount_point_there
+   # Does the input file exists
+   if [ ! -f "$COMMAND_1P" ]; then
+     echo "Point file $COMMAND_1P does not exists!"
+     exit 1
+    fi
+
+   # Convert points
+   echo "$GPSBABEL -D 0 -w -i csv -f $COMMAND_1P -o gpx -F -"
+   GPXFILE="$($GPSBABEL -D 0 -w -i csv -f $COMMAND_1P -o gpx -F -)"
+
+   # Download to GPX with today's date
+   GPX_STORE_FILE="$MNT_GPX/points-$(date -I).gpx"
+   check_file_existence "$GPX_STORE_FILE"
+   echo "Writing points to file $GPX_STORE_FILE"
+   # Not in testmode
+   [ -z "$TESTMODE" ] && cat <<< $GPXFILE >> $GPX_STORE_FILE
+   # Debug
+   # echo "---"
+   # cat <<< $GPXFILE
+   # echo "---"
+   ;;
+
+osm|putosm)
+   # Check for mkgmap
+   tool_there "$MKGMAP"
+
+   # Check for GPX Mount point
+   gpx_mount_point_there
+   # Does the input parameters exists?
+   if [ -z "$COMMAND_3P" ]; then
+     echo "No options supplied to command!"
+     exit 1
+   fi
+
+   # Prepare for Garmin - use intermediate temporary file
+   INFILE=$(tempfile --suffix=.osm)
+   # When required, decompress xz'ed OSM file
+   if [ "${COMMAND_1P##*.}" == "xz" ]; then
+       echo "Extracting compressed OSM file ..."
+       echo "xz -d -c ${COMMAND_1P} > $INFILE"
+       # Not in testmode
+       if [ -z "$TESTMODE" ]; then
+	   xz -d -c "${COMMAND_1P}" > "$INFILE"
+	   ERR=$?
+	   if [ $ERR -ne 0 ]; then
+	       echo "Program execution failed with error code $ERR!"
+	       exit 1
+	   fi
+       fi
+   else
+       # Use the file verbatim; make link for it
+       exec_tool ln -s "$COMMAND_1P" "$INFILE"
+   fi
+
+
+   # Work unter /tmp for temporary file
+   cd /tmp
+   check_file_existence "/tmp/$MKGMAP_OUT"
+   # Get a random number for the map name; each map need an unique number with 6 digits
+   MAPNUM="$(printf  '%.3d' $(( $RANDOM % 1000 )) )$(printf  '%.3d' $(( $RANDOM % 1000 )) )"
+   exec_tool mkgmap -n $MAPNUM --description="$COMMAND_2P" --latin1 --gmapsupp \
+      	               --remove-short-arcs=3 --route \
+    		       "$INFILE"
+   if [ ! -f "$MKGMAP_OUT" ]; then
+     echo "File $MKGMAP_OUT did not got created! Something went wrong!"
+     exit 1
+   fi
+
+   # Download to etrex with requested name
+   STORE_FILE="${MNT_OSM}/gmap_${COMMAND_3P}.img"
+   check_file_existence "$STORE_FILE"
+   echo "Writing map to file $STORE_FILE"
+   # Not in testmode
+   [ -z "$TESTMODE" ] && cp -v "$MKGMAP_OUT" "$STORE_FILE"
+
+   # Remove temporary files again
+   echo "Removing temp files again ..."
+   exec_tool rm -v  "/tmp/$MKGMAP_OUT"
+   if [ "${COMMAND_1P##*.}" == "xz" ]; then
+       exec_tool rm -v "$INFILE"
+   fi
+   ;;
+
+# *** Unknown Function
+*)
+echo "Unknown Function \"$COMMAND_MODE\" requested!"
+exit 1
+;;
+
+esac
+
+echo
+echo "Done"
