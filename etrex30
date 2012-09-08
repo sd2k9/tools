@@ -144,17 +144,17 @@ get_options() {
 	  echo "  Conversion is done with ${GPSBABEL}"
 	  echo
           echo "Download a OSM Map"
-	  echo "  Command: (put)osm map.osm[.xz] title shorttitle"
+	  echo "  Command: (put)osm map.osm[.xz|.gz] title shorttitle"
 	  echo "  Downloads the specified OSM Map file to the GPS by the name gmap_<shorttitle>.img"
 	  echo "  with the supplied title and the map file name on the device."
-	  echo "  The input OSM file can be compressed with xz."
+	  echo "  The input OSM file can be compressed with xz or gzip."
 	  echo "  Conversion is done with ${MKGMAP}"
 	  echo
           echo "Combine a OSM Map with Topographic overlay and Download it"
-	  echo "  Command: (put)topo map.osm[.xz] topo.osm[.xz] title shorttitle"
+	  echo "  Command: (put)topo map.osm[.xz] topo.osm[.xz|.gz] title shorttitle"
 	  echo "  Combine the specified OSM Map file with the provided topographic overlay and"
           echo "  download it to the GPS with the supplied title by the name gmap_<shorttitle>.img"
-	  echo "  The input OSM files can be compressed with xz."
+	  echo "  The input OSM files can be compressed with xz or gzip."
 	  echo "  Merging and conversion is done with ${MKGMAP}"
           exit 0
         ;;
@@ -353,35 +353,45 @@ topo|puttopo|osmtopo|putosmtopo)
    # Then prepare OSM file - first the file name to use, which is fixed by mkgmap
    # INFILEOSM=$(mktemp --tmpdir=${WORKDIR} $MKTEMPDRYRUNPARA infileosmXXXX.osm)
    # abort_on_error $?
-   INFILEOSM="${WORKDIR}/60000000.osm"
 
    # When required, decompress xz'ed OSM file
    if [ "${COMMAND_1P##*.}" == "xz" ]; then
        echo "Extracting compressed OSM file ..."
+       INFILEOSM="${WORKDIR}/60000000.osm"
        echo "xz -d -c ${COMMAND_1P} > $INFILEOSM"
        # Not in testmode
        if [ -z "$TESTMODE" ]; then
 	   xz -d -c "${COMMAND_1P}" > "$INFILEOSM"
 	   abort_on_error $?
        fi
+   elif [ "${COMMAND_1P##*.}" == "gz" ]; then
+       # Just link the GZ file, mkgmap can handle it
+       INFILETOPO="${WORKDIR}/60000000.osm.gz"
+       exec_tool ln -s "$COMMAND_1P" "$INFILETOPO"
    else
        # Use the file verbatim; make link for it
+       INFILEOSM="${WORKDIR}/60000000.osm"
        exec_tool ln -s "$COMMAND_1P" "$INFILEOSM"
    fi
    # Same for xz'ed Topo OSM file
    # INFILETOPO=$(mktemp --tmpdir=${WORKDIR} $MKTEMPDRYRUNPARA infiletopoXXXX.osm)
    # abort_on_error $?
-   INFILETOPO="${WORKDIR}/50000000.osm"
    if [ "${COMMAND_2P##*.}" == "xz" ]; then
        echo "Extracting compressed Topographic Overlay OSM file ..."
+       INFILETOPO="${WORKDIR}/50000000.osm"
        echo "xz -d -c ${COMMAND_2P} > $INFILETOPO"
        # Not in testmode
        if [ -z "$TESTMODE" ]; then
 	   xz -d -c "${COMMAND_2P}" > "$INFILETOPO"
 	   abort_on_error $?
        fi
+   elif [ "${COMMAND_2P##*.}" == "gz" ]; then
+       # Just link the GZ file, mkgmap can handle it
+       INFILETOPO="${WORKDIR}/50000000.osm.gz"
+       exec_tool ln -s "$COMMAND_2P" "$INFILETOPO"
    else
        # Use the file verbatim; make link for it
+       INFILETOPO="${WORKDIR}/50000000.osm"
        exec_tool ln -s "$COMMAND_2P" "$INFILETOPO"
    fi
 
