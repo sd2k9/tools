@@ -1,5 +1,9 @@
 #!/bin/bash
 # Wrapper für Garmin etrex 30
+# See help
+#
+# TODO
+# - Combine putosm and puttopo
 #
 #      Version: $LastChangedRevision$
 #  last change: $LastChangedDate$
@@ -20,10 +24,12 @@ TESTMODE=
 COMMAND_MODE=
 # Option to Command (2nd parameter)
 COMMAND_1P=
-# Option to Command (3nd parameter)
+# Option to Command (3rd parameter)
 COMMAND_2P=
-# Option to Command (4nd parameter)
+# Option to Command (4th parameter)
 COMMAND_3P=
+# Option to Command (5th parameter)
+COMMAND_4P=
 
 # GPSbabel executable
 GPSBABEL=gpsbabel
@@ -53,16 +59,22 @@ tool_there() {
    exit 1
   fi
 }
+# Abort on tool error (errorcode <> 0)
+abort_on_error() {
+    local err
+    err=$1
+    shift
+    if [ $err -ne 0 ]; then
+	   echo "Program execution failed with error code $err!"
+	   exit 1
+    fi
+}
 # Execute this tool
 exec_tool() {
    echo "$@"
    if [ -z "$TESTMODE" ]; then
        eval "$@"
-       ERR=$?
-       if [ $ERR -ne 0 ]; then
-	   echo "Program execution failed with error code $ERR!"
-	   exit 1
-       fi
+       abort_on_error $?
    fi
 }
 # gpx Mount Point there?
@@ -96,7 +108,7 @@ get_options() {
       opt="$1"
       shift
       case $opt in
-          -t|--test)
+          -t|--test|--dry-run)
           # Test Mode
        	  TESTMODE=1
       	;;
@@ -116,8 +128,8 @@ get_options() {
           echo "Call: etrex30 command options"
           echo
           echo "General Options:"
-          echo "     [-t|--test] - Do not execute commands, only echo"
-          echo "  [-V|--version] - Print program version and exit"
+          echo " [-t|--test|--dry-run] - Do not execute commands, only echo"
+          echo "        [-V|--version] - Print program version and exit"
           echo
           echo "Download a GPS Track"
 	  echo "  Command: (put)track routename gpx_or_google_maps_url"
@@ -137,6 +149,13 @@ get_options() {
 	  echo "  with the supplied title and the map file name on the device."
 	  echo "  The input OSM file can be compressed with xz."
 	  echo "  Conversion is done with ${MKGMAP}"
+	  echo
+          echo "Combine a OSM Map with Topographic overlay and Download it"
+	  echo "  Command: (put)topo map.osm[.xz] topo.osm[.xz] title shorttitle"
+	  echo "  Combine the specified OSM Map file with the provided topographic overlay and"
+          echo "  download it to the GPS with the supplied title by the name gmap_<shorttitle>.img"
+	  echo "  The input OSM files can be compressed with xz."
+	  echo "  Merging and conversion is done with ${MKGMAP}"
           exit 0
         ;;
           *)
@@ -153,6 +172,9 @@ get_options() {
       		;;
       	    4)
       		COMMAND_3P="$opt"
+      		;;
+      	    5)
+      		COMMAND_4P="$opt"
       		;;
       	    *)
                   # Too many arguments
@@ -248,7 +270,7 @@ osm|putosm)
    gpx_mount_point_there
    # Does the input parameters exists?
    if [ -z "$COMMAND_3P" ]; then
-     echo "No options supplied to command!"
+     echo "No options (or not enough) supplied to command!"
      exit 1
    fi
 
@@ -299,6 +321,113 @@ osm|putosm)
    if [ "${COMMAND_1P##*.}" == "xz" ]; then
        exec_tool rm -v "$INFILE"
    fi
+   ;;
+
+topo|puttopo|osmtopo|putosmtopo)
+   # Check for mkgmap
+   tool_there "$MKGMAP"
+
+   # Check for GPX Mount point
+   gpx_mount_point_there
+   # Does the input parameters exists?
+   if [ -z "$COMMAND_4P" ]; then
+     echo "No options (or not enough) supplied to command!"
+     exit 1
+   fi
+
+   # Use this parameter to create/not create a file/directory with mktemp
+   if [ -z "$TESTMODE" ]; then
+       # No Dry run
+       MKTEMPDRYRUNPARA=""
+    else
+       # Dry Run
+       MKTEMPDRYRUNPARA="--dry-run"
+   fi
+   # First create temporary directory
+   echo "Creating temporary directory - please clean up by yourself in case etrex30 aborts"
+   echo -n "mktemp -d --tmpdir $MKTEMPDRYRUNPARA etrex30-XXXXX"
+   WORKDIR=$(mktemp -d --tmpdir $MKTEMPDRYRUNPARA etrex30-XXXXX)
+   echo " --> ${WORKDIR}"
+   abort_on_error $?
+
+   # Then prepare OSM file - first the file name to use, which is fixed by mkgmap
+   # INFILEOSM=$(mktemp --tmpdir=${WORKDIR} $MKTEMPDRYRUNPARA infileosmXXXX.osm)
+   # abort_on_error $?
+   INFILEOSM="${WORKDIR}/60000000.osm"
+
+   # When required, decompress xz'ed OSM file
+   if [ "${COMMAND_1P##*.}" == "xz" ]; then
+       echo "Extracting compressed OSM file ..."
+       echo "xz -d -c ${COMMAND_1P} > $INFILEOSM"
+       # Not in testmode
+       if [ -z "$TESTMODE" ]; then
+	   xz -d -c "${COMMAND_1P}" > "$INFILEOSM"
+	   abort_on_error $?
+       fi
+   else
+       # Use the file verbatim; make link for it
+       exec_tool ln -s "$COMMAND_1P" "$INFILEOSM"
+   fi
+   # Same for xz'ed Topo OSM file
+   # INFILETOPO=$(mktemp --tmpdir=${WORKDIR} $MKTEMPDRYRUNPARA infiletopoXXXX.osm)
+   # abort_on_error $?
+   INFILETOPO="${WORKDIR}/50000000.osm"
+   if [ "${COMMAND_2P##*.}" == "xz" ]; then
+       echo "Extracting compressed Topographic Overlay OSM file ..."
+       echo "xz -d -c ${COMMAND_2P} > $INFILETOPO"
+       # Not in testmode
+       if [ -z "$TESTMODE" ]; then
+	   xz -d -c "${COMMAND_2P}" > "$INFILETOPO"
+	   abort_on_error $?
+       fi
+   else
+       # Use the file verbatim; make link for it
+       exec_tool ln -s "$COMMAND_2P" "$INFILETOPO"
+   fi
+
+   # Work under temporary directory
+   echo "cd ${WORKDIR}"
+   [ -z "$TESTMODE" ] && cd ${WORKDIR}
+   check_file_existence "$MKGMAP_OUT"
+
+   # Convert the "normal" OSM file - the number file names are mandatory
+   # mkgmap --draw-priority=25 60000000.osm --> 60000000.img
+   exec_tool mkgmap --draw-priority=25 "$INFILEOSM"
+   if [ -z "$TESTMODE" -a ! -f "6*.img" ]; then
+     echo "Expected output files 6*.img did not got created! Something went wrong!"
+     exit 1
+   fi
+
+   # Next is the topo OSM file - the number file names are mandatory
+   # mkgmap --draw-priority=100 --transparent 50000000.osm --> 50000000.img
+   exec_tool mkgmap --draw-priority=100  --transparent "$INFILETOPO"
+   if [ -z "$TESTMODE" -a ! -f "5*.img" ]; then
+     echo "Expected output files 5*.img did not got created! Something went wrong!"
+     exit 1
+   fi
+
+   # Get a random number for the map name; each map need an unique number with 6 digits
+   MAPNUM="$(printf  '%.3d' $(( $RANDOM % 1000 )) )$(printf  '%.3d' $(( $RANDOM % 1000 )) )"
+   # Now merge everything together and create --> gmapsupp.img
+   exec_tool mkgmap -n $MAPNUM --description="$COMMAND_3P" --latin1 --gmapsupp \
+      	               --remove-short-arcs=3 --route \
+                       --family-id=60 --product-id=1 6*.img \
+		       --family-id=50 --product-id=1 5*.img
+   if [ -z "$TESTMODE" -a ! -f "$MKGMAP_OUT" ]; then
+     echo "File $MKGMAP_OUT did not got created! Something went wrong!"
+     exit 1
+   fi
+
+   # Download to etrex with requested name
+   STORE_FILE="${MNT_OSM}/gmap_${COMMAND_4P}.img"
+   check_file_existence "$STORE_FILE"
+   echo "Writing map to file $STORE_FILE"
+   # Not in testmode
+   [ -z "$TESTMODE" ] && cp -v "$MKGMAP_OUT" "$STORE_FILE"
+
+   # Remove temporary directory again
+   echo "Removing temp directory again ..."
+   exec_tool rm -v  ${WORKDIR}
    ;;
 
 # *** Unknown Function
