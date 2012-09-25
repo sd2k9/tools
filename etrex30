@@ -77,6 +77,21 @@ exec_tool() {
        abort_on_error $?
    fi
 }
+# Create a symbolic link within the correct directory
+exec_ln() {
+    local ifil
+    # Resolve input file to absolute path
+    ifil=$(readlink -f "$1")
+    abort_on_error $?
+    shift
+    local ofil
+    ofil="$1"
+    shift
+    # Use the file verbatim; make link for it - need to change to target directory
+    exec_tool pushd ${ofil%/*}
+    exec_tool ln -s "$ifil" "${ofil##*/}"
+    exec_tool popd
+}
 # gpx Mount Point there?
 gpx_mount_point_there() {
   if [ ! -d "$MNT_GPX" ]; then
@@ -291,7 +306,7 @@ osm|putosm)
        fi
    else
        # Use the file verbatim; make link for it
-       exec_tool ln -s "$COMMAND_1P" "$INFILE"
+       exec_ln "$COMMAND_1P" "$INFILE"
    fi
 
 
@@ -367,11 +382,11 @@ topo|puttopo|osmtopo|putosmtopo)
    elif [ "${COMMAND_1P##*.}" == "gz" ]; then
        # Just link the GZ file, mkgmap can handle it
        INFILETOPO="${WORKDIR}/60000000.osm.gz"
-       exec_tool ln -s "$COMMAND_1P" "$INFILETOPO"
+       exec_ln "$COMMAND_1P" "$INFILETOPO"
    else
        # Use the file verbatim; make link for it
        INFILEOSM="${WORKDIR}/60000000.osm"
-       exec_tool ln -s "$COMMAND_1P" "$INFILEOSM"
+       exec_ln "$COMMAND_1P" "$INFILEOSM"
    fi
    # Same for xz'ed Topo OSM file
    # INFILETOPO=$(mktemp --tmpdir=${WORKDIR} $MKTEMPDRYRUNPARA infiletopoXXXX.osm)
@@ -388,11 +403,11 @@ topo|puttopo|osmtopo|putosmtopo)
    elif [ "${COMMAND_2P##*.}" == "gz" ]; then
        # Just link the GZ file, mkgmap can handle it
        INFILETOPO="${WORKDIR}/50000000.osm.gz"
-       exec_tool ln -s "$COMMAND_2P" "$INFILETOPO"
+       exec_ln "$COMMAND_2P" "$INFILETOPO"
    else
        # Use the file verbatim; make link for it
        INFILETOPO="${WORKDIR}/50000000.osm"
-       exec_tool ln -s "$COMMAND_2P" "$INFILETOPO"
+       exec_ln "$COMMAND_2P" "$INFILETOPO"
    fi
 
    # Work under temporary directory
@@ -403,7 +418,7 @@ topo|puttopo|osmtopo|putosmtopo)
    # Convert the "normal" OSM file - the number file names are mandatory
    # mkgmap --draw-priority=25 60000000.osm --> 60000000.img
    exec_tool mkgmap --draw-priority=25 "$INFILEOSM"
-   if [ -z "$TESTMODE" -a ! -f "6*.img" ]; then
+   if [ -z "$TESTMODE" -a ! -f 6*.img ]; then
      echo "Expected output files 6*.img did not got created! Something went wrong!"
      exit 1
    fi
@@ -411,7 +426,7 @@ topo|puttopo|osmtopo|putosmtopo)
    # Next is the topo OSM file - the number file names are mandatory
    # mkgmap --draw-priority=100 --transparent 50000000.osm --> 50000000.img
    exec_tool mkgmap --draw-priority=100  --transparent "$INFILETOPO"
-   if [ -z "$TESTMODE" -a ! -f "5*.img" ]; then
+   if [ -z "$TESTMODE" -a ! -f 5*.img ]; then
      echo "Expected output files 5*.img did not got created! Something went wrong!"
      exit 1
    fi
@@ -437,7 +452,7 @@ topo|puttopo|osmtopo|putosmtopo)
 
    # Remove temporary directory again
    echo "Removing temp directory again ..."
-   exec_tool rm -v  ${WORKDIR}
+   exec_tool rm -rv ${WORKDIR}
    ;;
 
 # *** Unknown Function
