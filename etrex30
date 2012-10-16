@@ -70,6 +70,7 @@ abort_on_error() {
     fi
 }
 # Execute this tool
+# Caution: Use \"text with spaces\" to escape spaces
 exec_tool() {
    echo "$@"
    if [ -z "$TESTMODE" ]; then
@@ -89,7 +90,7 @@ exec_ln() {
     shift
     # Use the file verbatim; make link for it - need to change to target directory
     exec_tool pushd ${ofil%/*}
-    exec_tool ln -s "$ifil" "${ofil##*/}"
+    exec_tool ln -s \"$ifil\" \"${ofil##*/}\"
     exec_tool popd
 }
 # gpx Mount Point there?
@@ -315,7 +316,7 @@ osm|putosm)
    check_file_existence "/tmp/$MKGMAP_OUT"
    # Get a random number for the map name; each map need an unique number with 6 digits
    MAPNUM="$(printf  '%.3d' $(( $RANDOM % 1000 )) )$(printf  '%.3d' $(( $RANDOM % 1000 )) )"
-   exec_tool mkgmap -n $MAPNUM --description="$COMMAND_2P" --latin1 --gmapsupp \
+   exec_tool mkgmap -n $MAPNUM --description=\"$COMMAND_2P\" --latin1 --gmapsupp \
       	               --remove-short-arcs=3 --route \
     		       "$INFILE"
    if [ ! -f "$MKGMAP_OUT" ]; then
@@ -332,9 +333,9 @@ osm|putosm)
 
    # Remove temporary files again
    echo "Removing temp files again ..."
-   exec_tool rm -v  "/tmp/$MKGMAP_OUT"
+   exec_tool rm -v  \"/tmp/$MKGMAP_OUT\"
    if [ "${COMMAND_1P##*.}" == "xz" ]; then
-       exec_tool rm -v "$INFILE"
+       exec_tool rm -v \"$INFILE\"
    fi
    ;;
 
@@ -417,7 +418,7 @@ topo|puttopo|osmtopo|putosmtopo)
 
    # Convert the "normal" OSM file - the number file names are mandatory
    # mkgmap --draw-priority=25 60000000.osm --> 60000000.img
-   exec_tool mkgmap --draw-priority=25 "$INFILEOSM"
+   exec_tool mkgmap --draw-priority=25 \"$INFILEOSM\"
    if [ -z "$TESTMODE" -a ! -f 6*.img ]; then
      echo "Expected output files 6*.img did not got created! Something went wrong!"
      exit 1
@@ -425,7 +426,7 @@ topo|puttopo|osmtopo|putosmtopo)
 
    # Next is the topo OSM file - the number file names are mandatory
    # mkgmap --draw-priority=100 --transparent 50000000.osm --> 50000000.img
-   exec_tool mkgmap --draw-priority=100  --transparent "$INFILETOPO"
+   exec_tool mkgmap --draw-priority=100  --transparent \"$INFILETOPO\"
    if [ -z "$TESTMODE" -a ! -f 5*.img ]; then
      echo "Expected output files 5*.img did not got created! Something went wrong!"
      exit 1
@@ -434,7 +435,7 @@ topo|puttopo|osmtopo|putosmtopo)
    # Get a random number for the map name; each map need an unique number with 6 digits
    MAPNUM="$(printf  '%.3d' $(( $RANDOM % 1000 )) )$(printf  '%.3d' $(( $RANDOM % 1000 )) )"
    # Now merge everything together and create --> gmapsupp.img
-   exec_tool mkgmap -n $MAPNUM --description="$COMMAND_3P" --latin1 --gmapsupp \
+   exec_tool mkgmap -n $MAPNUM --description=\"$COMMAND_3P\" --latin1 --gmapsupp \
       	               --remove-short-arcs=3 --route \
                        --family-id=60 --product-id=1 6*.img \
 		       --family-id=50 --product-id=1 5*.img
@@ -452,7 +453,7 @@ topo|puttopo|osmtopo|putosmtopo)
 
    # Remove temporary directory again
    echo "Removing temp directory again ..."
-   exec_tool rm -rv ${WORKDIR}
+   exec_tool rm -rv \"${WORKDIR}\"
    ;;
 
 # *** Unknown Function
