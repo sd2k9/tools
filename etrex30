@@ -306,7 +306,8 @@ osm|putosm)
 	   fi
        fi
    else
-       # Use the file verbatim; make link for it
+       # Use the file verbatim; make link for it (remove our tempfile first)
+       exec_tool  rm  "$INFILE"
        exec_ln "$COMMAND_1P" "$INFILE"
    fi
 
@@ -314,8 +315,8 @@ osm|putosm)
    # Work unter /tmp for temporary file
    cd /tmp
    check_file_existence "/tmp/$MKGMAP_OUT"
-   # Get a random number for the map name; each map need an unique number with 6 digits
-   MAPNUM="$(printf  '%.3d' $(( $RANDOM % 1000 )) )$(printf  '%.3d' $(( $RANDOM % 1000 )) )"
+   # Get a random number for the map name; each map need an unique number with 8 digits
+   MAPNUM="$(printf  '%.4d' $(( $RANDOM % 10000 )) )$(printf  '%.4d' $(( $RANDOM % 10000 )) )"
    exec_tool mkgmap -n $MAPNUM --description=\"$COMMAND_2P\" --latin1 --gmapsupp \
       	               --remove-short-arcs=3 --route \
     		       "$INFILE"
@@ -432,8 +433,8 @@ topo|puttopo|osmtopo|putosmtopo)
      exit 1
    fi
 
-   # Get a random number for the map name; each map need an unique number with 6 digits
-   MAPNUM="$(printf  '%.3d' $(( $RANDOM % 1000 )) )$(printf  '%.3d' $(( $RANDOM % 1000 )) )"
+   # Get a random number for the map name; each map need an unique number with 8 digits
+   MAPNUM="$(printf  '%.4d' $(( $RANDOM % 10000 )) )$(printf  '%.4d' $(( $RANDOM % 10000 )) )"
    # Now merge everything together and create --> gmapsupp.img
    exec_tool mkgmap -n $MAPNUM --description=\"$COMMAND_3P\" --latin1 --gmapsupp \
       	               --remove-short-arcs=3 --route \
