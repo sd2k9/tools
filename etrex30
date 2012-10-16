@@ -11,6 +11,14 @@
 #  GNU General Public Licence applies
 
 
+
+
+echo "Need fix of puttopo! Complete call of mkgmap must be combined into one"
+echo "Example:"
+echo "mkgmap -n 031397 --description="Scheidegg OSM" --latin1 --gmapsupp --remove-short-arcs=3 --route --family-id=60 --family-name="OSM" --product-id=1 60000000.img --family-id=50 --family-name="Topo" --product-id=1 50000000.img
+"
+exit
+
 # *** Settings ***
 # Garmin Mount Point
 MNT=/media/GARMIN
