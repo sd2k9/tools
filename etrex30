@@ -13,12 +13,6 @@
 
 
 
-echo "Need fix of puttopo! Complete call of mkgmap must be combined into one"
-echo "Example:"
-echo "mkgmap -n 031397 --description="Scheidegg OSM" --latin1 --gmapsupp --remove-short-arcs=3 --route --family-id=60 --family-name="OSM" --product-id=1 60000000.img --family-id=50 --family-name="Topo" --product-id=1 50000000.img
-"
-exit
-
 # *** Settings ***
 # Garmin Mount Point
 MNT=/media/GARMIN
@@ -425,29 +419,16 @@ topo|puttopo|osmtopo|putosmtopo)
    [ -z "$TESTMODE" ] && cd ${WORKDIR}
    check_file_existence "$MKGMAP_OUT"
 
-   # Convert the "normal" OSM file - the number file names are mandatory
-   # mkgmap --draw-priority=25 60000000.osm --> 60000000.img
-   exec_tool mkgmap --draw-priority=25 \"$INFILEOSM\"
-   if [ -z "$TESTMODE" -a ! -f 6*.img ]; then
-     echo "Expected output files 6*.img did not got created! Something went wrong!"
-     exit 1
-   fi
-
-   # Next is the topo OSM file - the number file names are mandatory
-   # mkgmap --draw-priority=100 --transparent 50000000.osm --> 50000000.img
-   exec_tool mkgmap --draw-priority=100  --transparent \"$INFILETOPO\"
-   if [ -z "$TESTMODE" -a ! -f 5*.img ]; then
-     echo "Expected output files 5*.img did not got created! Something went wrong!"
-     exit 1
-   fi
-
    # Get a random number for the map name; each map need an unique number with 8 digits
    MAPNUM="$(printf  '%.4d' $(( $RANDOM % 10000 )) )$(printf  '%.4d' $(( $RANDOM % 10000 )) )"
-   # Now merge everything together and create --> gmapsupp.img
+
+   # Do everything in one step, single conversion as given by OSM Wiki does not work --> gmapsupp.img
    exec_tool mkgmap -n $MAPNUM --description=\"$COMMAND_3P\" --latin1 --gmapsupp \
       	               --remove-short-arcs=3 --route \
-                       --family-id=60 --product-id=1 6*.img \
-		       --family-id=50 --product-id=1 5*.img
+                       --family-id=60 --family-name=\"OSM\"  --product-id=1 \
+                          --draw-priority=25 \"$INFILEOSM\" \
+		       --family-id=50 --family-name=\"Topo\" --product-id=1 \
+                          --draw-priority=100 --transparent  \"$INFILETOPO\"
    if [ -z "$TESTMODE" -a ! -f "$MKGMAP_OUT" ]; then
      echo "File $MKGMAP_OUT did not got created! Something went wrong!"
      exit 1
