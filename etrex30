@@ -174,6 +174,11 @@ get_options() {
           echo "  download it to the GPS with the supplied title by the name gmap_<shorttitle>.img"
 	  echo "  The input OSM files can be compressed with xz or gzip."
 	  echo "  Merging and conversion is done with ${MKGMAP}"
+          echo
+          echo "Beautify/Make a GPX file human-readable"
+	  echo "  Command: fixgpx file"
+	  echo "  Runs the gpx file through ${GPSBABEL} and transforms it into a readable structure."
+	  echo "  For example, files from the garmin device lack spaces and line breaks."
           exit 0
         ;;
           *)
@@ -444,6 +449,30 @@ topo|puttopo|osmtopo|putosmtopo)
    # Remove temporary directory again
    echo "Removing temp directory again ..."
    exec_tool rm -rv \"${WORKDIR}\"
+   ;;
+
+# *** GPX file beautification
+fixgpx)
+   # Check for gpsbabel
+   tool_there "$GPSBABEL"
+
+   # Does the input file name exists?
+   if [ -z "$COMMAND_1P" ]; then
+     echo "No options supplied to command!"
+     exit 1
+   fi
+   if [ ! -f "$COMMAND_1P" ]; then
+     echo "File $COMMAND_1P not found!"
+     exit 1
+   fi
+
+   # Convert using gpsbabel
+   exec_tool $GPSBABEL -i gpx -f "$COMMAND_1P" -o gpx -F "$COMMAND_1P"
+   ERR=$?
+   if [ $ERR -ne 0 ]; then
+       echo "Program execution failed with error code $ERR!"
+       exit 1
+   fi
    ;;
 
 # *** Unknown Function
