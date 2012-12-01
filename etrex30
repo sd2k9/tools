@@ -179,6 +179,9 @@ get_options() {
 	  echo "  Command: fixgpx file"
 	  echo "  Runs the gpx file through ${GPSBABEL} and transforms it into a readable structure."
 	  echo "  For example, files from the garmin device lack spaces and line breaks."
+          echo
+	  echo "Get mkgmap from http://www.mkgmap.org.uk/snapshots/"
+	  echo "  Caution: The available debian package is very old and probably won't work"
           exit 0
         ;;
           *)
@@ -467,7 +470,7 @@ fixgpx)
    fi
 
    # Convert using gpsbabel
-   exec_tool $GPSBABEL -i gpx -f "$COMMAND_1P" -o gpx -F "$COMMAND_1P"
+   exec_tool $GPSBABEL -i gpx -f \"$COMMAND_1P\" -o gpx -F \"$COMMAND_1P\"
    ERR=$?
    if [ $ERR -ne 0 ]; then
        echo "Program execution failed with error code $ERR!"
