@@ -1,0 +1,184 @@
+#!/bin/bash
+# Controls the Alice DSL Box
+# Supported type: o2 Box 4421
+# Functions: See Help Text
+#
+#
+#      Version: $LastChangedRevision$
+#  last change: $LastChangedDate$
+#  (c) 2013 by Robert Lange (robert.lange@s1999.tu-chemnitz.de)
+#  GNU General Public Licence applies
+#
+
+# *** Settings ***
+# Config file to read from (it is sourced, so take care)
+CONFIG="${HOME}/.alicerc"
+# Test mode: True when defined (only echo commands) - Set by command line
+TESTMODE=
+# Program Copyright
+COPYRIGHT="alice-box-control
+(c) 2013 by Robert Lange (robert.lange@s1999.tu-chemnitz.de)
+GNU General Public Licence applies"
+
+
+# *** Functions - Helpers ***
+# Abort on tool error (errorcode <> 0)
+abort_on_error() {
+    local err
+    err=$1
+    shift
+    if [ $err -ne 0 ]; then
+	   echo "Program execution failed with error code $err!"
+	   exit 1
+    fi
+}
+# Execute this tool
+# Caution: Use \"text with spaces\" to escape spaces/special characters
+exec_tool() {
+   echo "$@"
+   if [ -z "$TESTMODE" ]; then
+       eval "$@"
+       abort_on_error $?
+   fi
+}
+
+# *** Functions - Workers ***
+login() {
+  # Log into Alice Box
+  exec_tool curl -d "\"controller=Overview&action=Login&id=0&idTextPassword=${AlicePassword}\"" ${AliceBaseUrl}/cgi-bin/Hn_login.cgi
+}
+logout() {
+  # Logout again
+  exec_tool curl ${AliceBaseUrl}/cgi-bin/Hn_logout.cgi
+}
+# Change WiFi state
+control_wifi() {
+  local onoff
+  onoff="$1"
+  shift
+  case "$onoff" in
+   on|ON|On)
+      State="${AliceWifiOn}"
+      ;;
+   off|OFF|Off)
+      State="${AliceWifiOff}"
+      ;;
+    *)
+      echo "Unknown action for wifi \"$onoff\"! Only \"on\" and \"off\" are supported"
+      exit 1
+      ;;
+  esac
+  exec_tool curl -d "\"${AliceWifiSettings}&${State}\"" ${AliceBaseUrl}/cgi-bin/wifi_basic.cgi
+}
+
+# *** Command line parsing
+get_options() {
+  local opt
+
+  while [ -n "$*" ] ; do
+      opt="$1"
+      shift
+      case $opt in
+          -t|--test|--dry-run)
+          # Test Mode
+       	  TESTMODE=1
+      	;;
+          -V|--version)
+          # Version output
+          REVISION='$LastChangedRevision: DEV $'
+          REVISION=${REVISION#\$LastChangedRevision: }
+          REVISION=${REVISION%\$}
+	  echo "$COPYRIGHT"
+	  echo "Revision: $REVISION"
+          exit 0
+          ;;
+          -h|--help|'-?')
+          # Hilfetext
+	  echo "$COPYRIGHT"
+          echo
+          echo "Controls the Alice DSL Box"
+          echo "Supported type: o2 Box 4421"
+          echo "Call: alice-box-control options"
+          echo
+          echo "Options:"
+          echo "        wifi on  - Enables  WiFi"
+          echo "        wifi off - Disables WiFi"
+          echo " [-t|--test|--dry-run] - Do not execute commands, only echo"
+          echo "        [-V|--version] - Print program version and exit"
+          echo
+	  cat<<EOF
+The settings are taken from the configuration file .alicerc in the home directory.
+Take care, it contains your router password and is sourced into the script. So better have it readable only by you.
+Format is as follows (with example values for o2 Box 4421)
+# Alice Box Base URL
+AliceBaseUrl="http://alice.box"
+# Alice Box Password
+AlicePassword="MySecretPassword"
+# WiFi Settings - please experiment with them until they suit your need.
+# (When there is demand I can make them configurable - for me it's enought this way)
+AliceWifiSettings="ReturnPage=%2Fwlan_basic.htm&controller=Network&action=SaveWlanMode&id=0&idTextWlanSSID=YourSSID&idCheckBoxShowSSID=1&idSelectWlanMode=3&idSelectWlanChannel1=0&idSelectWlanChannel2=36&idSelectWlanTxPower=2&idSelectWlanChannnelWidth=1"
+# Wifi On
+AliceWifiOn="idCheckBoxWlanEnalbe=1"
+# Wifi Off
+AliceWifiOff="idCheckBoxWlanEnalbe=0"
+EOF
+          echo
+          exit 0
+        ;;
+        wifi|WIFI)
+          # Wifi Operation
+	  opt_wifi="$1"
+	  shift
+	  if [ -z "$opt_wifi" ]; then
+    	     echo "Missing action for wifi!! \"on\" and \"off\" are supported"
+   	     exit 1
+          fi
+          case "$opt_wifi" in
+            on|ON|On)
+	       login
+	       control_wifi on
+	       logout
+	       exit 0
+               ;;
+            off|OFF|Off)
+	       login
+	       control_wifi off
+	       logout
+	       exit 0
+               ;;
+             *)
+      	       echo "Unknown action for wifi \"$opt_wifi\"! Only \"on\" and \"off\" are supported"
+   	       exit 1
+               ;;
+          esac
+        ;;
+        *)
+           # Unknown Argument
+  	   echo "Unknown argument \"$1\"! See help text for usage"
+   	   exit 1
+  	   ;;
+      esac
+  done
+}
+
+
+# *** Read config file or complain when not there
+if [ ! -f "$CONFIG" ]; then
+    echo "Config file $CONFIG not found!"
+    echo
+    get_options "--help"
+fi
+# Source config file
+.  $CONFIG
+
+
+# *** Call Command Line Parsing and Program execution
+# When no options supplied then call help
+if [ -z "$1" ]; then
+    get_options "--help"
+else
+    get_options "$@"
+fi
+
+echo "Done!"
+echo
