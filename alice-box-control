@@ -101,6 +101,7 @@ get_options() {
           echo "Call: alice-box-control options"
           echo
           echo "Options:"
+          echo "        login    - Log into webpage"
           echo "        wifi on  - Enables  WiFi"
           echo "        wifi off - Disables WiFi"
           echo " [-t|--test|--dry-run] - Do not execute commands, only echo"
@@ -151,6 +152,14 @@ EOF
    	       exit 1
                ;;
           esac
+        ;;
+        login|LOGIN|Login)
+          # Only login
+	  login
+	  echo
+	  echo
+      	  echo "Opening browser so you can access the Alice Box (please logout by yourself afterwards)"
+	  exec_tool exo-open --launch WebBrowser ${AliceBaseUrl}
         ;;
         *)
            # Unknown Argument
