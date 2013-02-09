@@ -1,0 +1,135 @@
+#!/usr/bin/env python3
+# -*- mode: python; coding: utf-8 -*-
+# file name: ''thunderbirdcsv2vcard''
+#  project: Convert Thunderbird Addressbook Export from CSV to VCard format
+#
+#      created: 2013-02-09
+#  last change: $Date$
+#      Version: $Name:$
+# Copyright (C) 2013 Robert Lange (robert.lange@s1999.tu-chemnitz.de)
+#
+#     This program is free software: you can redistribute it and/or modify
+#     it under the terms of the GNU General Public License as published by
+#     the Free Software Foundation, version 3 of the License
+#
+#     This program is distributed in the hope that it will be useful,
+#     but WITHOUT ANY WARRANTY; without even the implied warranty of
+#     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#     GNU General Public License for more details.
+#
+#     You should have received a copy of the GNU General Public License
+#     along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+
+
+
+# *** Import modules
+# To control output level easily
+import logging
+# Argument parser
+import argparse
+# Exit Function
+import sys
+
+
+# ********************************************************************************
+# *** Global settings as dictionary
+# opt = {'jack': 4098,
+#        'sape': 4139}
+
+
+# Provide eprint, wprint and iprint as logging shortcuts
+iprint = logging.info
+wprint = logging.warning
+eprint = logging.error
+
+
+
+# ********************************************************************************
+
+# *** Define your functions/objects
+
+# class ExtractMailError(BaseException):
+#    """Exception Class for function extract_mail_content
+# 
+#    These raised errors are not critical, they signal that the processing
+#    should be aborted here.
+#    """
+#    pass
+
+# def store_file(uid, msg):
+#     """Store the attachment with random name in file system
+# 
+#     Argument: User ID
+#               Attachment as message object
+# 
+#     Returns the file name without path of the created file
+# 
+#     Raises exception StoreFileError when an error occurs;
+#     Error message to print is stored as 'args'
+#     """
+
+
+
+# ********************************************************************************
+
+# *** Main Program
+def main():
+
+
+    # *** Command line parsing
+    # cmd_usage="usage: %prog [options] args"
+    cmd_desc ="""%(prog)s
+{0}
+
+Converts Thunderbird Addressbook Export from CSV to VCard format.
+
+The Vcard file then can be used e.g. to import the contacts into an Android phone.
+
+""".format(__license__)
+    cmd_version="%(prog)s " + __version__ + '\n' + __license__
+    cmd_parser = argparse.ArgumentParser(description=cmd_desc,
+                 formatter_class=argparse.RawDescriptionHelpFormatter)  # With pre-formatted description
+    cmd_parser.add_argument('infile', help='Input file name, Exported thunderbird addressbook data in CSV format', metavar='inputfile')
+    cmd_parser.add_argument('-o', '--output', dest='outfile', nargs=1, required=False,
+                                  help='Output file name, when not given print to screen', metavar='file')
+    cmd_parser.add_argument('-V', '--version', action='version', version=cmd_version)
+    cmd_parser.add_argument('--quiet', '-q', dest='quiet', action='store_true',
+                        default=False, help='Quiet Output')
+    cmd_parser.add_argument('--debug', '-d', dest='debug', action='store_true',
+                         default=False, help='Debug Output')
+    # Do the parsing, abort on any error
+    cmd_line = cmd_parser.parse_args()
+
+    # Configure logging
+    if cmd_line.debug:
+       # Show debug when DEBUG is set
+       loglevel = logging.DEBUG
+    elif cmd_line.quiet:
+       # Show only from warnings when being QUIET
+       loglevel = logging.WARNING
+    else:
+       loglevel = logging.INFO
+    logging.basicConfig(level=loglevel, format="%(message)s")
+
+
+    # Code starts here
+    # ...
+
+    # Feddisch
+    return 0
+
+
+
+
+
+# *** Version and License setting
+__version__ = ''.join(filter(str.isdigit, "$LastChangedRevision$"))
+if __version__ == "":
+   __version__ = "(development version)"
+__license__ = """Copyright (C) 2013 Robert Lange (robert.lange@s1999.tu-chemnitz.de)
+Licensed under GNU General Public License (http://www.gnu.org/licenses/gpl.html)"""
+
+# *** Call Main program
+if __name__ == "__main__":
+    sys.exit(main())
