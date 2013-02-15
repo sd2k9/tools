@@ -5,14 +5,6 @@ Tools I use to ease my work, not big enough to bless them with an
 dedicate project, but maybe enough to be of interest to others too.
 
 
-Git
----
-Wrapper around command line git for my common used commands, which
-I tend to forget
-
-Language: Bash
-
-
 alice-box-control
 -----------------
 Controls an Alice DSL Router Box
