@@ -28,8 +28,14 @@
 import logging
 # Argument parser
 import argparse
+# File check
+import os
 # Exit Function
 import sys
+# CSV Handling
+import csv
+# Quoted Printable Handling -> Not needed for Android
+# import quopri
 
 
 # ********************************************************************************
@@ -47,8 +53,28 @@ perror = logging.error
 
 # ********************************************************************************
 
-# *** Define your functions/objects
 
+    # Create our quoted printable wrapper object
+class OutputQuotedPrintable:
+   """Wrapper around file objects to perform quoted printable wrapping in VCARD entries"""
+
+   def __init__(self, filehandle):
+       """C'tor with file object to work with"""
+       self._f = filehandle
+
+   def write(self, prefix, text):
+       """Write vcard text to file handle, perform quoted printable wrapping
+          when required. Newline is automatically added
+          Arguments
+          prefix - Prefix (before the content itself) without the separating colon
+          text   - Text itself, wrap when required
+       """
+
+       # Verbatim Output - Quoted Printable Handling not needed for Android
+       self._f.write(prefix + ':' + text + '\n')
+
+
+# ********************************************************************************
 def csv2vcard(inf, outf):
     """ Converts Thunderbird CSV to VCard
 
@@ -60,7 +86,42 @@ def csv2vcard(inf, outf):
     Returns: 0 on Success, otherwise error code > 0
 
     """
-    # TODO: Write me
+    # Thunderbird CSV is: 
+    # First Name,Last Name,Display Name,Nickname,Primary Email,Secondary Email,Screen Name,Work Phone,Home Phone,Fax Number,Pager Number,Mobile Number,Home Address,Home Address 2,Home City,Home State,Home ZipCode,Home Country,Work Address,Work Address 2,Work City,Work State,Work ZipCode,Work Country,Job Title,Department,Organization,Web Page 1,Web Page 2,Birth Year,Birth Month,Birth Day,Custom 1,Custom 2,Custom 3,Custom 4,Notes,
+
+
+    # Read the file as CSV and print it
+    reader = csv.reader(inf)
+
+    # Throw away first line, which is header
+    reader.__next__()
+
+    # Create our quoted printable wrapper object
+    outqp = OutputQuotedPrintable(outf)
+
+    for row in reader:
+        outqp.write('BEGIN', 'VCARD')
+        outqp.write('VERSION', '2.1')
+        # Name, Formatted Name
+        outqp.write('N', row[1] + ';' + row[0])
+        if row[2]:  # Use Display name
+            outqp.write('FN', row[2])
+        else:       # Build ourself
+            outqp.write('FN', row[0] + ' ' + row[1])
+        # Phones
+        if row[7]:    # Work Phone
+            outqp.write('TEL;WORK',  row[7])
+        if row[8]:    # Home Phone
+            outqp.write('TEL;HOME', row[8])
+        if row[11]:    # Mobile
+            outqp.write('TEL;CELL', row[11])
+        # Emails
+        if row[4]:    # Primary EMail
+            outqp.write('EMAIL;HOME',  row[4])
+        if row[5]:    # Secondary EMail
+            outqp.write('EMAIL;OTHER',  row[5])
+        outqp.write('END', 'VCARD\n')
+
 
     # *** Finally done
     pinfo("Done!")
@@ -89,8 +150,8 @@ The Vcard file then can be used e.g. to import the contacts into an Android phon
     cmd_parser = argparse.ArgumentParser(description=cmd_desc,
                  formatter_class=argparse.RawDescriptionHelpFormatter)  # With pre-formatted description
     cmd_parser.add_argument('infile', help='Input file name, Exported thunderbird addressbook data in CSV format', metavar='inputfile')
-    cmd_parser.add_argument('-o', '--output', dest='outfile', nargs=1, required=False,
-                                  help='Output file name, when not given print to screen', metavar='file')
+    cmd_parser.add_argument('-o', '--output', dest='outfile', required=False,
+                                  help='Output file name, when not given print to screen (Use extension .vcf for Android)', metavar='file')
     cmd_parser.add_argument('-V', '--version', action='version', version=cmd_version)
     cmd_parser.add_argument('--quiet', '-q', dest='quiet', action='store_true',
                         default=False, help='Quiet Output')
@@ -112,7 +173,7 @@ The Vcard file then can be used e.g. to import the contacts into an Android phon
 
 
     # Open the input file
-    with open(cmd_line.infile, mode='r') as infile:
+    with open(cmd_line.infile, mode='r', newline='') as infile:
         # Output is either file name or screen
         if cmd_line.outfile:   # We have a file we can open
             if os.path.isfile(cmd_line.outfile):  # uh, exists already
