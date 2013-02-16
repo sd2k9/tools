@@ -38,3 +38,14 @@ The route is simplified to contain less points on the way
 Input can be a Google Maps URL or a GPX file
 
 Language: Bash
+
+
+
+thunderbirdcsv2vcard
+--------------------
+Converts Thunderbird Addressbook Export from CSV to VCard format.
+The VCard file then can be used e.g. to import the contacts into an Android phone
+addressbook.
+
+
+Language: Python v3
