@@ -127,6 +127,19 @@ def csv2vcard(inf, outf):
     pinfo("Done!")
     return 0
 
+# ********************************************************************************
+
+class Once(argparse.Action):
+   """Argparse Action with only a single argument, preventing multiple issuing
+
+   http://stackoverflow.com/questions/14915986/only-one-command-line-argument-with-argparse
+   """
+   def __call__(self, parser, namespace, values, option_string = None):
+       # print '{n} {v} {o}'.format(n = namespace, v = values, o = option_string)
+       if getattr(namespace, self.dest) is not None:
+          msg = '{o} can only be specified once'.format(o = option_string)
+          raise argparse.ArgumentError(None, msg)
+       setattr(namespace, self.dest, values)
 
 
 
@@ -150,7 +163,7 @@ The Vcard file then can be used e.g. to import the contacts into an Android phon
     cmd_parser = argparse.ArgumentParser(description=cmd_desc,
                  formatter_class=argparse.RawDescriptionHelpFormatter)  # With pre-formatted description
     cmd_parser.add_argument('infile', help='Input file name, Exported thunderbird addressbook data in CSV format', metavar='inputfile')
-    cmd_parser.add_argument('-o', '--output', dest='outfile', required=False,
+    cmd_parser.add_argument('-o', '--output', dest='outfile', required=False, action=Once,
                                   help='Output file name, when not given print to screen (Use extension .vcf for Android)', metavar='file')
     cmd_parser.add_argument('-V', '--version', action='version', version=cmd_version)
     cmd_parser.add_argument('--quiet', '-q', dest='quiet', action='store_true',
