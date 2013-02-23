@@ -1,0 +1,9 @@
+#!/bin/bash
+# Copy current directory to middle-click clipboard
+
+TXT="$PWD"
+
+echo -n "$TXT" | xclip -selection primary
+
+echo "Put to middle-click clipoard:"
+echo "$TXT"

@@ -49,3 +49,14 @@ addressbook.
 
 
 Language: Python v3
+
+clip-curdir, clip-filename
+--------------------------
+
+Copy the current directory (clip-curdir) or the
+complete file name with path (clip-filename)
+to the middle-click clipboard.
+
+
+
+Language: Bash

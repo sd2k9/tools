@@ -1,0 +1,17 @@
+#!/bin/bash
+# Copy complete file name to middle-click clipboard
+
+INFILE="${1}"
+
+if [ -z "$INFILE" ]; then
+   echo "Copy complete file name to middle-click clipboard"
+   echo "call with $0 filename"
+fi
+
+# Canonialize INFILE
+INFILE=$(readlink -m "${INFILE}")
+
+echo -n "$INFILE" | xclip -selection primary
+
+echo "Put to middle-click clipoard:"
+echo "$INFILE"
