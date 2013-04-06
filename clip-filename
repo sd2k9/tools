@@ -1,15 +1,31 @@
 #!/bin/bash
 # Copy complete file name to middle-click clipboard
+# --win: Use windows directory
+
+USEWIN=0
+if [ "$1" == "win" -o "$1" == "--win" -o "$1" == "-w" ]; then
+  # Use windows path instead
+  USEWIN=1
+  shift
+fi
+
 
 INFILE="${1}"
 
 if [ -z "$INFILE" ]; then
    echo "Copy complete file name to middle-click clipboard"
-   echo "call with $0 filename"
+   echo "call with $0 [--win] filename"
 fi
 
 # Canonialize INFILE
 INFILE=$(readlink -m "${INFILE}")
+
+if [ $USEWIN -eq 1 ]; then
+  # Use windows path instead
+  INFILE="$(cygpath --windows "$INFILE")"
+fi
+
+
 
 echo -n "$INFILE" | xclip -selection primary
 

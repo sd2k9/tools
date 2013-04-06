@@ -1,7 +1,16 @@
 #!/bin/bash
 # Copy current directory to middle-click clipboard
+# --win: Use windows directory
 
-TXT="$PWD"
+
+
+if [ "$1" == "win" -o "$1" == "--win" -o "$1" == "-w" ]; then
+  # Copy windows path
+  TXT="$(cygpath --windows "$PWD")"
+else
+  # Copy Unix path
+  TXT="$PWD"
+fi
 
 echo -n "$TXT" | xclip -selection primary
 
