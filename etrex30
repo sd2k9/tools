@@ -152,6 +152,7 @@ get_options() {
           echo "Download a GPS Track"
 	  echo "  Command: (put)track routename gpx_or_google_maps_url"
 	  echo "  Downloads the specified route file to the GPS"
+	  echo "  The track can be compressed with xz."
 	  echo "  Conversion is done with ${MAP2NAVI}"
           echo
           echo "Download a list of points"
@@ -162,10 +163,10 @@ get_options() {
 	  echo "  Conversion is done with ${GPSBABEL}"
 	  echo
           echo "Download a OSM Map"
-	  echo "  Command: (put)osm map.osm[.xz|.gz] title shorttitle"
+	  echo "  Command: (put)osm map.osm[.xz] title shorttitle"
 	  echo "  Downloads the specified OSM Map file to the GPS by the name gmap_<shorttitle>.img"
 	  echo "  with the supplied title and the map file name on the device."
-	  echo "  The input OSM file can be compressed with xz or gzip."
+	  echo "  The input OSM file can be compressed with xz."
 	  echo "  Conversion is done with ${MKGMAP}"
 	  echo
           echo "Combine a OSM Map with Topographic overlay and Download it"
@@ -239,9 +240,30 @@ track|puttrack)
      exit 1
     fi
 
+   # Prepare for Garmin - use intermediate temporary file
+   INFILE=$(tempfile --suffix=.gpx)
+   # When required decompress input file
+   if [ "${COMMAND_2P##*.}" == "xz" ]; then
+       echo "Extracting compressed track file ..."
+       echo "xz -d -c ${COMMAND_2P} > $INFILE"
+       # Not in testmode
+       if [ -z "$TESTMODE" ]; then
+	   xz -d -c "${COMMAND_2P}" > "$INFILE"
+	   ERR=$?
+	   if [ $ERR -ne 0 ]; then
+	       echo "Program execution failed with error code $ERR!"
+	       exit 1
+	   fi
+       fi
+   else
+       # Use the file verbatim; make link for it (remove our tempfile first)
+       exec_tool  rm  "$INFILE"
+       exec_ln "$COMMAND_2P" "$INFILE"
+   fi
+
    # Convert using map2navi
-   echo "$MAP2NAVI --stdout $COMMAND_1P $COMMAND_2P"
-   GPXFILE=$($MAP2NAVI --stdout "$COMMAND_1P" "$COMMAND_2P")
+   echo "$MAP2NAVI --stdout $COMMAND_1P $INFILE"
+   GPXFILE=$($MAP2NAVI --stdout "$COMMAND_1P" "$INFILE")
    ERR=$?
    if [ $ERR -ne 0 ]; then
        echo "Program execution failed with error code $ERR!"
