@@ -6,7 +6,8 @@
 #      created: 2013-02-09
 #  last change: $Date$
 #      Version: $Name:$
-# Copyright (C) 2013 Robert Lange (robert.lange@s1999.tu-chemnitz.de)
+#
+#     Copyright (C) 2013 Robert Lange (robert.lange@s1999.tu-chemnitz.de)
 #
 #     This program is free software: you can redistribute it and/or modify
 #     it under the terms of the GNU General Public License as published by
@@ -103,6 +104,7 @@ def csv2vcard(inf, outf):
         outqp.write('BEGIN', 'VCARD')
         outqp.write('VERSION', '2.1')
         # Name, Formatted Name
+        # DEBUG: print(row)
         outqp.write('N', row[1] + ';' + row[0])
         if row[2]:  # Use Display name
             outqp.write('FN', row[2])
