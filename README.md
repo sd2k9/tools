@@ -16,6 +16,7 @@ Actions
 
 Language: Bash
 
+
 etrex30
 -------
 Wrapper around various Garmin etrex (30) tasks
@@ -29,6 +30,7 @@ Commands
 
 Language: Bash
 
+
 map2navi
 --------
 Put a route to a GPS Handheld
@@ -40,23 +42,27 @@ Input can be a Google Maps URL or a GPX file
 Language: Bash
 
 
-
 thunderbirdcsv2vcard
 --------------------
 Converts Thunderbird Addressbook Export from CSV to VCard format.
 The VCard file then can be used e.g. to import the contacts into an Android phone
 addressbook.
 
-
 Language: Python v3
+
 
 clip-curdir, clip-filename
 --------------------------
-
 Copy the current directory (clip-curdir) or the
 complete file name with path (clip-filename)
 to the middle-click clipboard.
 
+Language: Bash
 
+
+geocaching2navi
+---------------
+Puts geocaching LOC files (from geocaching.com) to your
+GPS handheld, saving you the hassle to input them manually.
 
 Language: Bash

@@ -1,0 +1,125 @@
+#!/bin/bash
+# Puts geocaching LOC files (from geocaching.com) to your
+# GPS handheld, saving you the hassle to input them manually
+#
+# This software is beta, use at your own risk!
+# Please update the settings below "Settungs" to suit your needs
+#
+#      Version: $LastChangedRevision$
+#  last change: $LastChangedDate$
+#
+#    Copyright (C) 2009 by Robert Lange (robert.lange@s1999.tu-chemnitz.de)
+#
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+# *** Settings ***
+# GPS Device, as supported by gpsbabel
+GPS_TYPE="garmin"
+# GPS Port
+GPS_PORT="/dev/ttyUSB0"
+
+
+# *** Settings you usually don't wanna change ***
+# GPSbabel executable
+GPSBABEL=gpsbabel
+
+# Program name (no need to change)
+PROGNAME=geocaching2navi
+# input files (set from command line)
+INFILES=
+
+
+
+# *** Functions ***
+# *** Command line parsing
+get_options() {
+  local opt
+  local argcounter=1
+
+  while [ -n "$*" ] ; do
+      opt="$1"
+      shift
+      case $opt in
+          -V|--version)
+          # Version output
+          REVISION='$LastChangedRevision: DEV$'
+          REVISION=${REVISION#\$LastChangedRevision: }
+          REVISION=${REVISION%\$}
+          echo "$PROGNAME, Revision $REVISION"
+          echo "(c) 2009 by Robert Lange (robert.lange@s1999.tu-chemnitz.de)"
+          echo "GNU General Public Licence applies"
+          exit 0
+          ;;
+          -h|--help|'-?')
+          # help text
+          echo "$PROGNAME - Put a geocaching.com LOC file to a GPS handheld"
+          echo "                 saving you the hassle to input them manually"
+          echo "This software is beta, use at your own risk!"
+          echo
+          echo "Call: $PROGNAME [OPTS] file1 file2 ..."
+          echo
+          echo "Options:"
+          echo "  [-h|--help] - This screen"
+          echo "  [-V|--version] - Print program version and exit"
+          echo "  fileX - Input files in geocaching.com LOC format"
+          exit 0
+        ;;
+          *)
+          # Store into
+	  INFILES="$INFILES $opt"
+      	;;
+      esac
+  done
+}
+
+# *** Call Command Line Parsing
+# When no options supplied then call help
+if [ -z "$1" ]; then
+    get_options "--help"
+else
+    get_options "$@"
+fi
+
+# *** Sanity Checks ***
+# Parameter
+if [ -z "$INFILES" ]; then
+   echo "No input files suppled! See help text for usage"
+   exit 1
+fi
+# gpsbabel there?
+if [ $(which $GPSBABEL > /dev/null) ]; then
+   echo "$GPSBABEL executable not found!"
+   exit 1
+fi
+
+# *** Put them all to your GPS
+echo Downloading files to your GPS ...
+# Append "-f" for all
+INFILES_BABEL=
+for file in $INFILES; do
+   INFILES_BABEL="$INFILES_BABEL -f $file"
+done
+
+echo $GPSBABEL -D 1 -w -i geo $INFILES_BABEL -o $GPS_TYPE -F $GPS_PORT
+     $GPSBABEL -D 1 -w -i geo $INFILES_BABEL -o $GPS_TYPE -F $GPS_PORT
+if [ $? -ne 0 ]; then
+   echo "Failure invoking $GPSBABEL - Aborting"
+   exit 1
+fi
+
+# *** Done
+echo
+echo "Done - Downloaded all files to $GPS_TYPE"
+echo
