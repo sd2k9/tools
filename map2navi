@@ -11,7 +11,7 @@
 #      Version: $LastChangedRevision$
 #  last change: $LastChangedDate$
 #
-#    Copyright (C) 2013 by Robert Lange (robert.lange@s1999.tu-chemnitz.de)
+#    Copyright (C) 2013 by Robert Lange <sd2k9@sethdepot.org>
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -76,7 +76,7 @@ get_options() {
           REVISION=${REVISION#\$LastChangedRevision: }
           REVISION=${REVISION%\$}
           echo "$PROGNAME, Revision $REVISION"
-          echo "(c) by Robert Lange (robert.lange@s1999.tu-chemnitz.de)"
+          echo "(c) by Robert Lange <sd2k9@sethdepot.org>"
           echo "GNU General Public Licence applies"
           exit 0
           ;;

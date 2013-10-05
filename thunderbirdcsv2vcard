@@ -7,7 +7,7 @@
 #  last change: $Date$
 #      Version: $Name:$
 #
-#     Copyright (C) 2013 Robert Lange (robert.lange@s1999.tu-chemnitz.de)
+#     Copyright (C) 2013 Robert Lange <sd2k9@sethdepot.org>
 #
 #     This program is free software: you can redistribute it and/or modify
 #     it under the terms of the GNU General Public License as published by
@@ -217,7 +217,7 @@ The Vcard file then can be used e.g. to import the contacts into an Android phon
 __version__ = ''.join(filter(str.isdigit, "$LastChangedRevision$"))
 if __version__ == "":
    __version__ = "(development version)"
-__license__ = """Copyright (C) 2013 Robert Lange (robert.lange@s1999.tu-chemnitz.de)
+__license__ = """Copyright (C) 2013 Robert Lange <sd2k9@sethdepot.org>
 Licensed under GNU General Public License (http://www.gnu.org/licenses/gpl.html)"""
 
 # *** Call Main program

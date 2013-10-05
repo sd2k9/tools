@@ -7,7 +7,7 @@
 #      Version: $LastChangedRevision$
 #  last change: $LastChangedDate$
 #
-#    Copyright (C) 2013 by Robert Lange (robert.lange@s1999.tu-chemnitz.de)
+#    Copyright (C) 2013 by Robert Lange <sd2k9@sethdepot.org>
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -30,7 +30,7 @@ CONFIG="${HOME}/.alicerc"
 TESTMODE=
 # Program Copyright
 COPYRIGHT="alice-box-control
-(c) 2013 by Robert Lange (robert.lange@s1999.tu-chemnitz.de)
+(c) 2013 by Robert Lange <sd2k9@sethdepot.org>
 GNU General Public Licence applies"
 
 
