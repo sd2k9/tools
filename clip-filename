@@ -9,8 +9,12 @@ if [ "$1" == "win" -o "$1" == "--win" -o "$1" == "-w" ]; then
   shift
 fi
 
+# Also special handling of "\ " --> " " otherwise you cannot paste it into GUI
+# programs
+INFILE="${1//\\ / }"
 
-INFILE="${1}"
+echo "$INFILE"
+
 
 if [ -z "$INFILE" ]; then
    echo "Copy complete file name to middle-click clipboard"
