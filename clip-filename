@@ -21,14 +21,19 @@ if [ -z "$INFILE" ]; then
    echo "call with $0 [--win] filename"
 fi
 
-# Canonialize INFILE
-INFILE=$(readlink -m "${INFILE}")
-
 if [ $USEWIN -eq 1 ]; then
   # Use windows path instead
   INFILE="$(cygpath --windows "$INFILE")"
+else
+   # Canonialize INFILE
+   if [[ ${INFILE} == */* ]]; then
+      # Take care when we are not in current directory - but this resolved links
+      # (not always wanted)
+      INFILE=$(readlink -m "${INFILE}")
+   else
+      INFILE="${PWD}/${INFILE}"
+   fi
 fi
-
 
 
 echo -n "$INFILE" | xclip -selection primary
