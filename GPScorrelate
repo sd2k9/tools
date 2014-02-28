@@ -1,0 +1,15 @@
+#!/bin/bash
+
+TRACK="$1"
+TIMEADJ="+9"
+
+echo "Current time adjustment: $TIMEADJ"
+if [ -z "$TRACK" ]; then
+	echo "Please give file name of track file"
+	exit
+fi
+
+# Call Command
+echo gpscorrelate -t -g "$TRACK" -v -z $TIMEADJ '*.jpg *.JPG'
+find . -iname \*.jpg -print0 | \
+    xargs --null gpscorrelate -t -g "$TRACK" -v -z $TIMEADJ

@@ -66,3 +66,10 @@ Puts geocaching LOC files (from geocaching.com) to your
 GPS handheld, saving you the hassle to input them manually.
 
 Language: Bash
+
+GPScorrelate
+------------
+Use gpscorrelate to annotate all pictures in the current
+directory with GPS positions.
+
+Language: Bash
