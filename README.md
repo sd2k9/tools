@@ -74,4 +74,5 @@ directory with GPS positions, determine time offset from a picture
 of your GPS handheld
 
 Language: Python 2
+
 Requires: PIL
