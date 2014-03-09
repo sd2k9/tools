@@ -1,15 +1,84 @@
-#!/bin/bash
+#!/usr/bin/env python
+# -*- mode: python; coding: utf-8 -*-
 
-TRACK="$1"
-TIMEADJ="+9"
+# Quick Hack to call gpscorrelate for a series of pictures (the ones in the
+# current directory) with the correct time adjustment
+#
+# The time adjustment is asked from the last picture in the directory.
+# So make sure you potograph the time of your GPS as the last picture
+#
+# No error checking added yet
+#
 
-echo "Current time adjustment: $TIMEADJ"
-if [ -z "$TRACK" ]; then
-	echo "Please give file name of track file"
-	exit
-fi
+# *** Import modules
+# Program call
+import subprocess
+# directory listing
+import os
+# Regexp
+import re
+# Exif extraction - not yet for python3 :-(
+import PIL.Image
+import PIL.ExifTags
+# Date calculations
+import datetime
+import time
+# Command line
+import sys
 
-# Call Command
-echo gpscorrelate -t -g "$TRACK" -v -z $TIMEADJ '*.jpg *.JPG'
-find . -iname \*.jpg -print0 | \
-    xargs --null gpscorrelate -t -g "$TRACK" -v -z $TIMEADJ
+# *** Some settings
+opts = {'picview_cmd': "gpicview",  # Picture viewer
+      }
+
+
+# *** Command line argument: Track file
+if len(sys.argv) != 2:
+    print("Please give file name of track file")
+    sys.exit()
+trackfil = sys.argv[1]
+
+
+
+# *** First we need to determine the time offset in seconds
+# Get listing, sort, filter out non-pics
+dirlist = os.listdir('.')
+lastfile = sorted(filter(re.compile("\.jpg$" , re.IGNORECASE).search, dirlist))[-1]
+print("Check this file for timestamp: " + lastfile)
+subprocess.call([opts['picview_cmd'], lastfile])
+
+print("What's the time shown on your GPS (HH:MM:SS)? ")
+timeshown = sys.stdin.readline().rstrip('\n')
+
+# Debug: timeshown="19:19:18"
+# print(timeshown)
+img = PIL.Image.open(lastfile)
+for tg, val in img._getexif().items():
+    # Need to do some decoding
+    if PIL.ExifTags.TAGS.get(tg, tg) == "DateTime":
+        timexif = val
+        break
+# img.close()  # How to close again?
+print("EXIF time is " + timexif )
+
+
+# Now get the difference between the two, we just ignore the day itself
+# print(timeshown)
+tpic  = time.strptime(timeshown, "%H:%M:%S")
+texif = time.strptime(timexif,   "%Y:%m:%d %H:%M:%S")
+# Time es deltas
+dpic  = datetime.timedelta(seconds=tpic[5], minutes=tpic[4], hours=tpic[3] )
+dexif = datetime.timedelta(seconds=texif[5], minutes=texif[4], hours=texif[3] )
+seconds = int((dpic - dexif).total_seconds())
+print ("Difference: " + str(seconds) + "s")
+
+
+# *** Just hand this over as seconds to the call for gpscorrelate
+print("gpscorrelate -t -g " + trackfil + " -v -O " + str(seconds) + " *.jpg *.JPG")
+# Alternative: Also include subdirectories
+# subprocess.call("find . -iname \*.jpg -print0 | xargs --null gpscorrelate -t -g " + trackfil + " -v -O " + str(seconds), shell=True)
+
+subprocess.call("find . -maxdepth 1 -iname \*.jpg -print0 | xargs --null gpscorrelate -t -g " + trackfil + " -v -O " + str(seconds), shell=True)
+
+
+# Done
+print("Done - Over and out")

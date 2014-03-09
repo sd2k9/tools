@@ -70,6 +70,8 @@ Language: Bash
 GPScorrelate
 ------------
 Use gpscorrelate to annotate all pictures in the current
-directory with GPS positions.
+directory with GPS positions, determine time offset from a picture
+of your GPS handheld
 
-Language: Bash
+Language: Python 2
+Requires: PIL
