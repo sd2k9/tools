@@ -286,7 +286,7 @@ track|puttrack)
    # Download to GPX with routename date
    GPX_STORE_FILE="$MNT_GPX/${COMMAND_1P}.gpx"
    check_file_existence "$GPX_STORE_FILE"
-   echo "Writing points to file $GPX_STORE_FILE"
+   echo "Writing track to file $GPX_STORE_FILE"
    # Not in testmode
    [ -z "$TESTMODE" ] && cat <<< "$GPXFILE" >> "$GPX_STORE_FILE"
    # Debug
@@ -466,7 +466,7 @@ topo|puttopo|osmtopo|putosmtopo)
    MAPNUM="$(printf  '%.4d' $(( $RANDOM % 10000 )) )$(printf  '%.4d' $(( $RANDOM % 10000 )) )"
 
    # Do everything in one step, single conversion as given by OSM Wiki does not work --> gmapsupp.img
-   exec_tool mkgmap -n $MAPNUM --description=\"$COMMAND_3P\" --latin1 --gmapsupp \
+   exec_tool mkgmap --verbose -n $MAPNUM --description=\"$COMMAND_3P\" --latin1 --gmapsupp \
       	               --remove-short-arcs=3 --route \
                        --family-id=60 --family-name=\"OSM\"  --product-id=1 \
                           --draw-priority=25 \"$INFILEOSM\" \
