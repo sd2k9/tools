@@ -67,6 +67,7 @@ GPS handheld, saving you the hassle to input them manually.
 
 Language: Bash
 
+
 GPScorrelate
 ------------
 Use gpscorrelate to annotate all pictures in the current
@@ -76,3 +77,14 @@ of your GPS handheld
 Language: Python 2
 
 Requires: PIL
+
+shrink-vids
+-----------
+Re-encode movies taken from digital cameras to significantly shrink the file size
+with only a small loss of quality
+Resutling files are in MPEG4 format, the bitrate is determined by the input
+movie width. Please modify/add in the file your favourite values.
+
+Language: Bash
+
+Requires: mplayer, mencoder
