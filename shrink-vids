@@ -1,8 +1,9 @@
 #!/bin/bash
 # Re-encode movies taken from digital cameras to significantly shrink the file size
-# with only a small loss of quality
+# with only a small loss of quality.
 # Resutling files are in MPEG4 format, the bitrate is determined by the input
 # movie width. Please modify/add in the file your favourite values.
+# It uses two pass encoding.
 #
 #      Version: $LastChangedRevision$
 #  last change: $LastChangedDate: 2008-03-21 22:36:35 +0100 (Fri, 21 Mar 2008) $
@@ -36,17 +37,21 @@ MPLAYER=mplayer
 MIDENTIFY="$MPLAYER -vo null -ao null -identify -frames 0"
 
 # *** Command line check
-if [ $# -ne 2 ] || [ "$1" == "--help" ] || [ "$1" == "-h" ]; then
+if [ $# -ne 3 ] || [ "$1" == "--help" ] || [ "$1" == "-h" ]; then
    echo "Shrink (camera) videos to smaller size"
-   echo "Command line: $0 inputfile outputfile"
+   echo "Command line: $0 model inputfile outputfile.avi"
+   echo "Model: Bitrate presets for encoding"
+   echo "       ACTIONPRO: Actionpro X7 camera"
+   echo "       IXUS500: Canon Ixus 500"
    echo "Used commands: $MENCODER $MPLAYER"
    echo "Coder options: ${MENCODER_OPTS}"
    exit 0
 fi
 
 # *** Get command line
-INFILE="$1"
-OUTFILE="$2"
+MODEL="$1"
+INFILE="$2"
+OUTFILE="$3"
 
 # *** Check for input file
 if [ ! -f "$INFILE" ]; then
@@ -56,30 +61,56 @@ fi
 
 
 # *** Determine input material 
-VIDEO_WIDTH=$($MIDENTIFY "$INFILE" |grep "ID_VIDEO_WIDTH" | cut -c 16-)
+VIDEO_WIDTH=$($MIDENTIFY "$INFILE" 2> /dev/null |grep "ID_VIDEO_WIDTH" | cut -c 16-)
 
 # *** Set encoding options
 # Select appropriate bitrate
 # Parameter to tune: vbitrate=bitrate in 1000bits
-case ${VIDEO_WIDTH} in
- 1920)
-   # For Canon Ixus 500
-   VIDEO_BITRATE=5000
-   ;;
- 640)
-   # For Canon Ixus 500
-   VIDEO_BITRATE=1800
-   ;;
+# IXUS500: This is for Canon Ixus 500
+case ${MODEL} in
+ "actionpro"|"ACTIONPRO"|"X7"|"x7")
+  # Actioncam Actionpro X7
+  case ${VIDEO_WIDTH} in
+   1920)
+     VIDEO_BITRATE=12000
+     ;;
+   1280)
+     VIDEO_BITRATE=6000
+     ;;
+   *)
+     echo "Unknown Input Video Material - Movie Width is ${VIDEO_WIDTH}"
+     echo "Dunno how to setup video bit rate - Exiting"
+     exit
+     ;;
+  esac
+  ;;
+ "ixus500"|"IXUS500")
+  # For Canon Ixus 500
+  case ${VIDEO_WIDTH} in
+   1920)
+     VIDEO_BITRATE=5000
+     ;;
+   640)
+     VIDEO_BITRATE=1800
+     ;;
+   *)
+     echo "Unknown Input Video Material - Movie Width is ${VIDEO_WIDTH}"
+     echo "Dunno how to setup video bit rate - Exiting"
+     exit
+     ;;
+  esac
+  ;;
  *)
-   echo "Unknown Input Video Material - Movie Width is ${VIDEO_WIDTH}"
-   echo "Dunno how to setup video bit rate - Exiting"
+   echo "Unknown Video Type (Model) - Exiting"
    exit
    ;;
 esac
 
 # Mencoder default options; taken from www.mplayerhq.hu and
 # a little bit adjusted. I am sure there is much space for improvement.
-MENCODER_OPTS="-srate 22050 -oac mp3lame -lameopts q=4:mode=3 -noskip -mc 0 \
+# No audio resampling: -srate 22050
+# Two pass encoding is appended at the end
+MENCODER_OPTS="-oac mp3lame -lameopts q=5:aq=0:mode=3 -noskip -mc 0 \
      -ovc lavc -lavcopts \
     vcodec=mpeg4:vbitrate=${VIDEO_BITRATE}:mbd=1:mv0:trell:v4mv:cbp:last_pred=3:predia=2:dia=2:vmax_b_frames=2:vb_strategy=1:precmp=2:cmp=2:subcmp=2:preme=2:qns=2"
 
@@ -87,15 +118,23 @@ MENCODER_OPTS="-srate 22050 -oac mp3lame -lameopts q=4:mode=3 -noskip -mc 0 \
 # *** Execute shrink ***
 echo
 echo "Converting file ..."
+echo "Selected Camera Model = ${MODEL}"
 echo "Selected bitrate = ${VIDEO_BITRATE} * 1000bit"
-echo $MENCODER ${MENCODER_OPTS} -o $OUTFILE $INFILE
-$MENCODER ${MENCODER_OPTS} -o "$OUTFILE" "$INFILE"
+echo "First pass ..."
+echo $MENCODER ${MENCODER_OPTS}:vpass=1:turbo -o $OUTFILE $INFILE
+$MENCODER ${MENCODER_OPTS}:vpass=1:turbo -o "$OUTFILE" "$INFILE"
+echo "Second pass ..."
+echo $MENCODER ${MENCODER_OPTS}:vpass=2 -o $OUTFILE $INFILE
+$MENCODER ${MENCODER_OPTS}:vpass=2 -o "$OUTFILE" "$INFILE"
 
 # Error when result file was not created
 if [ ! -f "$OUTFILE" ]; then
   echo "Result file not existing! Something went wrong"
   exit 1
 fi
+
+# Remove statistics file again
+rm divx2pass.log
 
 # *** Print resulting file size ***
 echo
