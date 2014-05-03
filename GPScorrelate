@@ -47,7 +47,7 @@ trackfil = sys.argv[1]
 dirlist = os.listdir('.')
 lastfile = sorted(filter(re.compile("\.jpg$" , re.IGNORECASE).search, dirlist))[-1]
 print("Check this file for timestamp: " + lastfile)
-subprocess.call([opts['picview_cmd'], lastfile])
+subprocess.Popen([opts['picview_cmd'], lastfile])
 
 print("What's the time shown on your GPS (HH:MM:SS)? ")
 timeshown = sys.stdin.readline().rstrip('\n')
@@ -71,16 +71,25 @@ texif = time.strptime(timexif,   "%Y:%m:%d %H:%M:%S")
 # Time es deltas
 dpic  = datetime.timedelta(seconds=tpic[5], minutes=tpic[4], hours=tpic[3] )
 dexif = datetime.timedelta(seconds=texif[5], minutes=texif[4], hours=texif[3] )
-seconds = int((dpic - dexif).total_seconds())
-print ("Difference: " + str(seconds) + "s")
+seconds = int( (dpic - dexif).total_seconds() )
 
+
+# We also need to adjust for difference between UTC and local time, GPS data is in UTC
+utcadjust = int( round( (datetime.datetime.now()-datetime.datetime.utcnow()).total_seconds() ) / 60 / 60 )
+
+# Beware, when you had the shift between winter and summer time you will be off by one hour!
 
 # *** Just hand this over as seconds to the call for gpscorrelate
-print("gpscorrelate -t -g " + trackfil + " -v -O " + str(seconds) + " *.jpg *.JPG")
+print("gpscorrelate  --timeadd  " + str(utcadjust) + " -t -g " + trackfil + " -v -O " + str(seconds) + " *.jpg *.JPG")
 # Alternative: Also include subdirectories
-# subprocess.call("find . -iname \*.jpg -print0 | xargs --null gpscorrelate -t -g " + trackfil + " -v -O " + str(seconds), shell=True)
+# subprocess.call("find . -iname \*.jpg -print0 | xargs --null gpscorrelate --timeadd " + str(utcadjust) + " -t -g " + trackfil + " -v -O " + str(seconds), shell=True)
 
-subprocess.call("find . -maxdepth 1 -iname \*.jpg -print0 | xargs --null gpscorrelate -t -g " + trackfil + " -v -O " + str(seconds), shell=True)
+subprocess.call("find . -maxdepth 1 -iname \*.jpg -print0 | xargs --null gpscorrelate --timeadd  " + str(utcadjust) + " -t -g " + trackfil + " -v -O " + str(seconds), shell=True)
+
+
+# Status infos
+print ("Time adjustment for UTC: " + str(utcadjust) + "hour(s) (beware of summer/winter time shift!")
+print ("Corrected time by: " + str(seconds) + "s")
 
 
 # Done
