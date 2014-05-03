@@ -32,8 +32,11 @@ opts = {'picview_cmd': "gpicview",  # Picture viewer
 
 
 # *** Command line argument: Track file
-if len(sys.argv) != 2:
-    print("Please give file name of track file")
+if len(sys.argv) != 2 or sys.argv[1] == "-h" or sys.argv[1] == "--help":
+    print("GPScorrelate: gpscorrelate for a series of pictures (the ones in the")
+    print("current directory) with the correct time adjustment.")
+    print("\nUsage:")
+    print("GPScorrelate track_file.gpx")
     sys.exit()
 trackfil = sys.argv[1]
 
