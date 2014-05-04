@@ -43,6 +43,7 @@ if [ $# -ne 3 ] || [ "$1" == "--help" ] || [ "$1" == "-h" ]; then
    echo "Model: Bitrate presets for encoding"
    echo "       ACTIONPRO: Actionpro X7 camera"
    echo "       IXUS500: Canon Ixus 500"
+   echo "       VHS: VHS Mono PAL Video"
    echo "Used commands: $MENCODER $MPLAYER"
    # Set later on echo "Coder options: ${MENCODER_OPTS}"
    exit 0
@@ -60,10 +61,14 @@ if [ ! -f "$INFILE" ]; then
 fi
 
 
-# *** Determine input material 
+# *** Determine input material
 VIDEO_WIDTH=$($MIDENTIFY "$INFILE" 2> /dev/null |grep "ID_VIDEO_WIDTH" | cut -c 16-)
 
 # *** Set encoding options
+# Additional encoder options
+MENCODER_MOREOPTS=
+# Descriptive text when used
+MENCODER_MOREOPTS_DESC=
 # Select appropriate bitrate
 # Parameter to tune: vbitrate=bitrate in 1000bits
 # IXUS500: This is for Canon Ixus 500
@@ -73,9 +78,11 @@ case ${MODEL} in
   case ${VIDEO_WIDTH} in
    1920)
      VIDEO_BITRATE=12000
+     AUDIO_QUALITY=5
      ;;
    1280)
      VIDEO_BITRATE=6000
+     AUDIO_QUALITY=5
      ;;
    *)
      echo "Unknown Input Video Material - Movie Width is ${VIDEO_WIDTH}"
@@ -89,9 +96,11 @@ case ${MODEL} in
   case ${VIDEO_WIDTH} in
    1920)
      VIDEO_BITRATE=5000
+     AUDIO_QUALITY=5
      ;;
    640)
      VIDEO_BITRATE=1800
+     AUDIO_QUALITY=5
      ;;
    *)
      echo "Unknown Input Video Material - Movie Width is ${VIDEO_WIDTH}"
@@ -99,6 +108,14 @@ case ${MODEL} in
      exit
      ;;
   esac
+  ;;
+ "VHS"|"vhs")
+  # For VHS Video PAL Mono Encoding
+  VIDEO_BITRATE=2048
+  AUDIO_QUALITY=6
+  # Cropping and Deinterlacing
+  MENCODER_MOREOPTS="-vf crop=696:552:12:8,pp=lb -noslices"
+  MENCODER_MOREOPTS_DESC="Cropping and Deinterlacing"
   ;;
  *)
    echo "Unknown Video Type (Model) - Exiting"
@@ -110,16 +127,21 @@ esac
 # a little bit adjusted. I am sure there is much space for improvement.
 # No audio resampling: -srate 22050
 # Two pass encoding is appended at the end
-MENCODER_OPTS="-oac mp3lame -lameopts q=5:aq=0:mode=3 -noskip -mc 0 \
+MENCODER_OPTS="${MENCODER_MOREOPTS} \
+     -oac mp3lame -lameopts q=${AUDIO_QUALITY}:aq=0:mode=3 -noskip -mc 0 \
      -ovc lavc -lavcopts \
-    vcodec=mpeg4:vbitrate=${VIDEO_BITRATE}:mbd=1:mv0:trell:v4mv:cbp:last_pred=3:predia=2:dia=2:vmax_b_frames=2:vb_strategy=1:precmp=2:cmp=2:subcmp=2:preme=2:qns=2"
+     vcodec=mpeg4:vbitrate=${VIDEO_BITRATE}:mbd=1:mv0:trell:v4mv:cbp:last_pred=3:predia=2:dia=2:vmax_b_frames=2:vb_strategy=1:precmp=2:cmp=2:subcmp=2:preme=2:qns=2"
 
 
 # *** Execute shrink ***
 echo
 echo "Converting file ..."
-echo "Selected Camera Model = ${MODEL}"
+echo "Selected Coding Model = ${MODEL}"
 echo "Selected bitrate = ${VIDEO_BITRATE} * 1000bit"
+echo "Selected Audio Quality = ${AUDIO_QUALITY} (0 best, 9 worst)"
+if [ -n "${MENCODER_MOREOPTS_DESC}" ]; then
+   echo "Additional Encoding Options = ${MENCODER_MOREOPTS_DESC}"
+fi
 echo "First pass ..."
 echo $MENCODER ${MENCODER_OPTS}:vpass=1:turbo -o $OUTFILE $INFILE
 $MENCODER ${MENCODER_OPTS}:vpass=1:turbo -o "$OUTFILE" "$INFILE"
