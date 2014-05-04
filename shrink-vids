@@ -44,7 +44,7 @@ if [ $# -ne 3 ] || [ "$1" == "--help" ] || [ "$1" == "-h" ]; then
    echo "       ACTIONPRO: Actionpro X7 camera"
    echo "       IXUS500: Canon Ixus 500"
    echo "Used commands: $MENCODER $MPLAYER"
-   echo "Coder options: ${MENCODER_OPTS}"
+   # Set later on echo "Coder options: ${MENCODER_OPTS}"
    exit 0
 fi
 
