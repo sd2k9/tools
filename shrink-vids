@@ -24,9 +24,7 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-# *** TODO ***
-# - With higher quality videos (e.g. Actioncam X7) try also 2pass encoding
-#   See vpass, turbo in mencoder help (below -lavcopts)
+# ------------------------------------------------------------------------------
 
 # *** Settings ***
 # Mencoder
@@ -36,23 +34,146 @@ MENCODER=mencoder
 MPLAYER=mplayer
 MIDENTIFY="$MPLAYER -vo null -ao null -identify -frames 0"
 
-# *** Command line check
-if [ $# -ne 3 ] || [ "$1" == "--help" ] || [ "$1" == "-h" ]; then
-   echo "Shrink (camera) videos to smaller size"
-   echo "Command line: $0 model inputfile outputfile.avi"
-   echo "Model: Bitrate presets for encoding"
-   echo "       ACTIONPRO: Actionpro X7 camera"
-   echo "       IXUS500: Canon Ixus 500"
-   echo "       VHS: VHS Mono PAL Video"
-   echo "Used commands: $MENCODER $MPLAYER"
-   # Set later on echo "Coder options: ${MENCODER_OPTS}"
-   exit 0
+# ------------------------------------------------------------------------------
+# *** Functions ***
+function help_text() {
+cat<<EOF
+Shrink (camera) videos to smaller size
+
+Usage: $(basename $0) [--start starttime --end endtime] model inputfile outputfile.avi
+
+--start starttime: Start encoding from time, in seconds or hh:mm:ss
+--end endtime:     Finish encoding at time, in seconds or  hh:mm:ss
+model: Bitrate presets for encoding
+       ACTIONPRO: Actionpro X7 camera
+       IXUS500: Canon Ixus 500
+       VHS: VHS Mono PAL Video
+
+inputfile: File to shrink
+outputfile.avi: Resulting file, must be AVI
+
+Used commands: $MENCODER $MPLAYER
+
+EOF
+}
+
+# Print Versionstring
+function versionstring () {
+# REVISION='$LastChangedRevision$'
+# REVISION=${REVISION#\$LastChangedRevision: }
+# REVISION=${REVISION% \$}
+cat<<EOF
+shrink-vids, Revision DEV
+(c) 2013,2014 by Robert Lange (sd2k9@sethdepot.org)
+Licensed under the GNU General Public License
+
+EOF
+}
+
+# Parse time to seconds
+# Input: ss oder hh:mm:ss
+function parse_time() {
+    local num
+    num="$1"
+    shift
+
+    # Only numbers? Return as-is
+    if [[ $num =~ ^[0-9]+$ ]] ; then
+	echo "$num"
+
+    # hh:mm:ss? Let date do the work
+    elif [[ $num =~ ^[0-2][0-9]:[0-5][0-9]:[0-5][0-9]$ ]] ; then
+	echo $(date -u --date "1970-01-01 ${num}"  +"%s")
+    # Everything else? Error
+    else
+	echo "Error: Unknown time format ${num}" 1>&2;  # To stderr, otherwise its caught as return
+	echo ""
+    fi
+}
+
+
+# ------------------------------------------------------------------------------
+
+# *** Rudimentary command line parsing
+
+# *** Kommandozeile auswerten
+get_options() {
+  local opt
+  local argcounter=1
+
+   # Parse command line for options
+   while [ -n "$*" ]; do
+      opt="$1"
+      shift
+      case $opt in
+      --help | -h) # Help
+         # First print  Versionstring
+         versionstring
+         echo
+         help_text
+         exit
+         ;;
+      --version | -V) # Version
+         echo
+         versionstring
+         exit
+         ;;
+      --start | -ss) # Next argument: Start Time
+         opt="$1"
+         shift
+         MOV_START=$(parse_time "$opt")
+	 if [ -z "${MOV_START}" ]; then # Error occured
+	     exit 1
+	 fi
+         ;;
+      --end | -e) # Next argument: End time
+         opt="$1"
+         shift
+         MOV_END=$(parse_time "$opt")
+	 if [ -z "${MOV_END}" ]; then # Error occured
+	     exit 1
+	 fi
+         ;;
+      *) # Positional options
+     	  case $argcounter in
+      	    1)
+      		MODEL="$opt"
+      		;;
+      	    2)
+      		INFILE="$opt"
+      		;;
+      	    3)
+      		OUTFILE="$opt"
+      		;;
+      	    *)
+                # Too many arguments
+  	        echo "Too many arguments! See help text for usage"
+  		exit 1
+  		;;
+      	  esac
+          #increment argument counter
+          let argcounter++
+          ;;
+      esac
+    done
+}
+
+# *** Call Command Line Parsing
+# When no options supplied then call help
+if [ -z "$1" ]; then
+    get_options "--help"
+else
+    get_options "$@"
 fi
 
-# *** Get command line
-MODEL="$1"
-INFILE="$2"
-OUTFILE="$3"
+
+# No or wrong commands supplied
+if [ -z "$OUTFILE" ]; then
+    echo "Wrong number of command line options!"
+    echo
+    help_text
+    exit 1
+fi
 
 # *** Check for input file
 if [ ! -f "$INFILE" ]; then
@@ -60,6 +181,10 @@ if [ ! -f "$INFILE" ]; then
    exit 1
 fi
 
+
+# ------------------------------------------------------------------------------
+
+# *** Now execute the action
 
 # *** Determine input material
 VIDEO_WIDTH=$($MIDENTIFY "$INFILE" 2> /dev/null |grep "ID_VIDEO_WIDTH" | cut -c 16-)
@@ -114,14 +239,46 @@ case ${MODEL} in
   VIDEO_BITRATE=2048
   AUDIO_QUALITY=6
   # Cropping and Deinterlacing
-  MENCODER_MOREOPTS="-vf crop=696:552:12:8,pp=lb -noslices"
-  MENCODER_MOREOPTS_DESC="Cropping and Deinterlacing"
+  MENCODER_MOREOPTS="${MENCODER_MOREOPTS} -vf crop=696:552:12:8,pp=lb -noslices"
+  if [ -n "${MENCODER_MOREOPTS_DESC}" ]; then  # Add space and komma
+      MENCODER_MOREOPTS_DESC="${MENCODER_MOREOPTS_DESC}, "
+  fi
+  MENCODER_MOREOPTS_DESC="${MENCODER_MOREOPTS_DESC}Cropping and Deinterlacing"
   ;;
  *)
    echo "Unknown Video Type (Model) - Exiting"
    exit
    ;;
 esac
+
+
+# *** Now bild start and end time, when requested
+# Start time we can take verbatim
+if [ -n "${MOV_START}" ]; then
+   # End must be given
+   if [ -z "${MOV_END}" ]; then
+       echo "ERROR: Currently start and end, both must be given!"
+       exit 1
+   fi
+   # Is start smaller than end
+   if [ ${MOV_START} -ge ${MOV_END} ]; then
+       echo "ERROR: start must be smaller than end! You wanna encode backwards?!"
+       exit 1
+   fi
+   # Now build the options
+   MENCODER_MOREOPTS="${MENCODER_MOREOPTS} -ss ${MOV_START} -endpos $((${MOV_END} - ${MOV_START}))"
+   # Update desc text
+   if [ -n "${MENCODER_MOREOPTS_DESC}" ]; then  # Add space and komma
+         MENCODER_MOREOPTS_DESC="${MENCODER_MOREOPTS_DESC}, "
+   fi
+   MENCODER_MOREOPTS_DESC="${MENCODER_MOREOPTS_DESC}Start/End Time"
+else
+  # It's an error when only END is present
+  if [ -n "${MOV_END}" ]; then
+      echo "ERROR: Currently start and end, both must be given!"
+      exit 1
+  fi
+fi
 
 # Mencoder default options; taken from www.mplayerhq.hu and
 # a little bit adjusted. I am sure there is much space for improvement.
@@ -141,6 +298,9 @@ echo "Selected bitrate = ${VIDEO_BITRATE} * 1000bit"
 echo "Selected Audio Quality = ${AUDIO_QUALITY} (0 best, 9 worst)"
 if [ -n "${MENCODER_MOREOPTS_DESC}" ]; then
    echo "Additional Encoding Options = ${MENCODER_MOREOPTS_DESC}"
+fi
+if [ -n "${MOV_END}" ]; then
+   echo "Only encode from ${MOV_START}s to ${MOV_END}s"
 fi
 echo "First pass ..."
 echo $MENCODER ${MENCODER_OPTS}:vpass=1:turbo -o $OUTFILE $INFILE
