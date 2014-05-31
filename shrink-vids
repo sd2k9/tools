@@ -33,6 +33,9 @@ MENCODER=mencoder
 # Movie Identification
 MPLAYER=mplayer
 MIDENTIFY="$MPLAYER -vo null -ao null -identify -frames 0"
+# Number of threads to use for encoding
+# Default use number of processors in system
+THREADS=$(grep "processor" /proc/cpuinfo | wc -l)
 
 # ------------------------------------------------------------------------------
 # *** Functions ***
@@ -236,14 +239,17 @@ case ${MODEL} in
   ;;
  "VHS"|"vhs")
   # For VHS Video PAL Mono Encoding
-  VIDEO_BITRATE=2048
+  VIDEO_BITRATE=1536
   AUDIO_BITRATE=56
-    # Cropping and Deinterlacing
-  MENCODER_MOREOPTS="${MENCODER_MOREOPTS} -vf crop=696:552:12:8,pp=lb -noslices"
+  # Cropping and Noise Filtering - Deinterlacing disabled
+  # MENCODER_MOREOPTS="${MENCODER_MOREOPTS} -vf crop=696:552:12:8,pp=lb -noslices"
+  MENCODER_MOREOPTS="${MENCODER_MOREOPTS} -vf crop=696:552:12:8,denoise3d -noslices"
+  #  MENCODER_MOREOPTS="${MENCODER_MOREOPTS} -vf crop=696:552:12:8,hqdn3d -noslices"
   if [ -n "${MENCODER_MOREOPTS_DESC}" ]; then  # Add space and komma
       MENCODER_MOREOPTS_DESC="${MENCODER_MOREOPTS_DESC}, "
   fi
-  MENCODER_MOREOPTS_DESC="${MENCODER_MOREOPTS_DESC}Cropping and Deinterlacing"
+  # MENCODER_MOREOPTS_DESC="${MENCODER_MOREOPTS_DESC}Cropping and Deinterlacing"
+  MENCODER_MOREOPTS_DESC="${MENCODER_MOREOPTS_DESC}Cropping and Denoising"
   ;;
  *)
    echo "Unknown Video Type (Model) - Exiting"
@@ -287,7 +293,7 @@ fi
 MENCODER_OPTS="${MENCODER_MOREOPTS} \
      -oac mp3lame -lameopts q=0:aq=0:abr:br=${AUDIO_BITRATE}:mode=3 -noskip -mc 0 \
      -ovc lavc -lavcopts \
-     vcodec=mpeg4:vbitrate=${VIDEO_BITRATE}:mbd=1:mv0:trell:v4mv:cbp:last_pred=3:predia=2:dia=2:vmax_b_frames=2:vb_strategy=1:precmp=2:cmp=2:subcmp=2:preme=2:qns=2"
+     vcodec=mpeg4:vbitrate=${VIDEO_BITRATE}:mbd=1:mv0:trell:v4mv:cbp:last_pred=3:predia=2:dia=2:vmax_b_frames=2:vb_strategy=1:precmp=2:cmp=2:subcmp=2:preme=2:qns=2:threads=${THREADS}"
 
 
 # *** Execute shrink ***
