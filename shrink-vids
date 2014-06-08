@@ -43,10 +43,10 @@ function help_text() {
 cat<<EOF
 Shrink (camera) videos to smaller size
 
-Usage: $(basename $0) [--start starttime --end endtime] model inputfile outputfile.avi
+Usage: $(basename $0) [--start starttime] [--end endtime] model inputfile outputfile.avi
 
 --start starttime: Start encoding from time, in seconds or hh:mm:ss
---end endtime:     Finish encoding at time, in seconds or  hh:mm:ss
+--end endtime:     Finish encoding at time,  in seconds or hh:mm:ss
 model: Bitrate presets for encoding
        ACTIONPRO: Actionpro X7 camera
        IXUS500: Canon Ixus 500
@@ -261,30 +261,41 @@ esac
 # *** Now bild start and end time, when requested
 # Start time we can take verbatim
 if [ -n "${MOV_START}" ]; then
-   # End must be given
-   if [ -z "${MOV_END}" ]; then
-       echo "ERROR: Currently start and end, both must be given!"
-       exit 1
-   fi
-   # Is start smaller than end
-   if [ ${MOV_START} -ge ${MOV_END} ]; then
-       echo "ERROR: start must be smaller than end! You wanna encode backwards?!"
-       exit 1
-   fi
    # Now build the options
-   MENCODER_MOREOPTS="${MENCODER_MOREOPTS} -ss ${MOV_START} -endpos $((${MOV_END} - ${MOV_START}))"
+   MENCODER_MOREOPTS="${MENCODER_MOREOPTS} -ss ${MOV_START}"
    # Update desc text
    if [ -n "${MENCODER_MOREOPTS_DESC}" ]; then  # Add space and komma
          MENCODER_MOREOPTS_DESC="${MENCODER_MOREOPTS_DESC}, "
    fi
-   MENCODER_MOREOPTS_DESC="${MENCODER_MOREOPTS_DESC}Start/End Time"
-else
-  # It's an error when only END is present
-  if [ -n "${MOV_END}" ]; then
-      echo "ERROR: Currently start and end, both must be given!"
-      exit 1
-  fi
+   MENCODER_MOREOPTS_DESC="${MENCODER_MOREOPTS_DESC}Start Time"
+
+   # Both start and endtime are given
+   if [ -n "${MOV_END}" ]; then
+      # Is start smaller than end
+      if [ ${MOV_START} -ge ${MOV_END} ]; then
+          echo "ERROR: start must be smaller than end! You wanna encode backwards?!"
+          exit 1
+      fi
+      # Now also build end time
+      MENCODER_MOREOPTS="${MENCODER_MOREOPTS} -endpos $((${MOV_END} - ${MOV_START}))"
+      # Update desc text
+      if [ -n "${MENCODER_MOREOPTS_DESC}" ]; then  # Add space and komma
+            MENCODER_MOREOPTS_DESC="${MENCODER_MOREOPTS_DESC}, "
+      fi
+      MENCODER_MOREOPTS_DESC="${MENCODER_MOREOPTS_DESC}End Time"
+   fi
 fi
+# Only end time given, no start
+if [ -n "${MOV_END}" -a -z "${MOV_END}" ]; then
+   # Can take end time verbatim
+   MENCODER_MOREOPTS="${MENCODER_MOREOPTS} -endpos ${MOV_END}"
+   # Update desc text
+   if [ -n "${MENCODER_MOREOPTS_DESC}" ]; then  # Add space and komma
+         MENCODER_MOREOPTS_DESC="${MENCODER_MOREOPTS_DESC}, "
+   fi
+   MENCODER_MOREOPTS_DESC="${MENCODER_MOREOPTS_DESC}End Time"
+fi
+
 
 # Mencoder default options; taken from www.mplayerhq.hu and
 # a little bit adjusted. I am sure there is much space for improvement.
