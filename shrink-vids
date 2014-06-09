@@ -219,7 +219,7 @@ case ${MODEL} in
      ;;
   esac
   ;;
- "ixus500"|"IXUS500")
+ "ixus500"|"IXUS500"|"ixus"|"IXUS")
   # For Canon Ixus 500
   case ${VIDEO_WIDTH} in
    1920)
@@ -286,7 +286,7 @@ if [ -n "${MOV_START}" ]; then
    fi
 fi
 # Only end time given, no start
-if [ -n "${MOV_END}" -a -z "${MOV_END}" ]; then
+if [ -n "${MOV_END}" -a -z "${MOV_START}" ]; then
    # Can take end time verbatim
    MENCODER_MOREOPTS="${MENCODER_MOREOPTS} -endpos ${MOV_END}"
    # Update desc text
@@ -316,7 +316,7 @@ echo "Selected Audio Bitrate = ${AUDIO_BITRATE}kbps"
 if [ -n "${MENCODER_MOREOPTS_DESC}" ]; then
    echo "Additional Encoding Options = ${MENCODER_MOREOPTS_DESC}"
 fi
-if [ -n "${MOV_END}" ]; then
+if [ -n "${MOV_START}" -o -n "${MOV_END}" ]; then
    echo "Only encode from ${MOV_START}s to ${MOV_END}s"
 fi
 echo "First pass ..."
