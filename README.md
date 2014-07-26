@@ -41,6 +41,12 @@ Input can be a Google Maps URL or a GPX file
 
 Language: Bash
 
+igc2gpx
+--------
+Convert a IGC track to GPX, keeping only the GPS data
+
+Language: Bash
+
 
 thunderbirdcsv2vcard
 --------------------

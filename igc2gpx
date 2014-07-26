@@ -1,0 +1,146 @@
+#!/bin/bash
+# Convert a IGC track to GPX, keeping only the GPS data
+#
+# Tested with IGC files created by flyhigh
+#
+# TODO
+# - currently nothing open
+#
+#      Version: $LastChangedRevision$
+#  last change: $LastChangedDate$
+#
+#    Copyright (C) 2014 by Robert Lange <sd2k9@sethdepot.org>
+#
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+
+# *** Settings ***
+# None
+
+# *** Settings you usually don't wanna change ***
+# GPSbabel executable
+GPSBABEL=gpsbabel
+
+# Program name (no need to change)
+PROGNAME=igc2gpx
+# Input igc file (set from command line)
+IGC_FILE=
+# Output GPX file (set from command line)
+GPX_FILE=
+
+
+# *** Functions ***
+# *** Command line parsing
+get_options() {
+  local opt
+  local argcounter=1
+
+  while [ -n "$*" ] ; do
+      opt="$1"
+      shift
+      case $opt in
+          -V|--version)
+          # Version output
+          REVISION='$LastChangedRevision: DEV$'
+          REVISION=${REVISION#\$LastChangedRevision: }
+          REVISION=${REVISION%\$}
+          echo "$PROGNAME, Revision $REVISION"
+          echo "(c) by Robert Lange <sd2k9@sethdepot.org>"
+          echo "GNU General Public Licence version 3 applies"
+          exit 0
+          ;;
+          -h|--help|'-?')
+          # help text
+          echo "$PROGNAME - Convert a IGC track to GPX, keeping only the GPS data"
+          echo
+          echo "Call: $PROGNAME input_igc_file [output_gpx_file]"
+          echo
+          echo "Options:"
+          echo "  [-h|--help] - This screen"
+          echo "  [-V|--version] - Print program version and exit"
+          echo "  input_igc_file - Filename of the IGC file to convert"
+          echo "  output_gpx_file - Output file name, derived from input file name when not set"
+          exit 0
+	  ;;
+          *)
+          # Store into 
+     	  case $argcounter in
+      	    1)
+      		IGC_FILE="$opt"
+      		;;
+      	    2)
+      		GPX_FILE="$opt"
+      		;;
+      	    *)
+                  # Too many arguments
+  	        echo "Too many arguments! See help text for usage"
+  		exit 1
+  		;;
+      	  esac
+          #increment argument counter
+          let argcounter++
+      	;;
+      esac
+  done
+}
+
+# *** Call Command Line Parsing
+# When no options supplied then call help
+if [ -z "$1" ]; then
+    get_options "--help"
+else
+    get_options "$@"
+fi
+
+# *** Sanity Checks ***
+# Parameter
+if [ -z "$IGC_FILE" ]; then
+   echo "No input file name given! See help text for usage"
+   exit 1
+fi
+if [ ! -f "$IGC_FILE" ]; then
+   echo "Input file $IGC_FILE not found!"
+   exit 1
+fi
+# gpsbabel there?
+if [ $(which $GPSBABEL > /dev/null) ]; then
+   echo "$GPSBABEL executable not found!"
+   exit 1
+fi
+
+
+# *** Derive output file name when not given
+if [ -z "$GPX_FILE" ]; then
+    GPX_FILE="${IGC_FILE%.*}.gpx"
+fi
+
+
+# *** Do the conversion
+# Convert via gpsbabel
+echo "$GPSBABEL -i igc -f $IGC_FILE -o gpx -F -"
+GPX_DATA=$($GPSBABEL -i igc -f "$IGC_FILE" -o gpx -F -)
+if [ $? -ne 0 ]; then
+    echo "Failure invoking $GPSBABEL - Aborting"
+    exit 1
+fi
+# Keep only GPS data
+echo "Stripping Non-GPS (PRESALTTRK) data ..."
+echo "$GPX_DATA" |  perl -e 'my $mt=""; while (<>) { $mt .= $_; }; $mt =~ s|<trk>[\s\n]*<name>PRESALTTRK</name>.+?</trk>||s; print $mt' > $GPX_FILE
+
+if [ $? -ne 0 ]; then
+    echo "Failure invoking perl - Aborting"
+    exit 1
+fi
+echo "Done - wrote $GPX_FILE"
+
