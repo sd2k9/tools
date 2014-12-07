@@ -28,11 +28,10 @@
 
 # *** Settings ***
 # Mencoder
-MENCODER=mencoder
+MENCODER=mpv
 # Encoding options are set below
-# Movie Identification
-MPLAYER=mplayer
-MIDENTIFY="$MPLAYER -vo null -ao null -identify -frames 0"
+# Movie Identification - use script from mpv
+MIDENTIFY="midentify"
 # Number of threads to use for encoding
 # Default use number of processors in system
 THREADS=$(grep "processor" /proc/cpuinfo | wc -l)
@@ -43,7 +42,7 @@ function help_text() {
 cat<<EOF
 Shrink (camera) videos to smaller size
 
-Usage: $(basename $0) [--start starttime] [--end endtime] model inputfile outputfile.avi
+Usage: $(basename $0) [--start starttime] [--end endtime] model inputfile outputfile.mp4
 
 --start starttime: Start encoding from time, in seconds or hh:mm:ss
 --end endtime:     Finish encoding at time,  in seconds or hh:mm:ss
@@ -53,7 +52,7 @@ model: Bitrate presets for encoding
        VHS: VHS Mono PAL Video
 
 inputfile: File to shrink
-outputfile.avi: Resulting file, must be AVI
+outputfile.mp4: Resulting file, Format is MP4
 
 Used commands: $MENCODER $MPLAYER
 
@@ -73,6 +72,7 @@ Licensed under the GNU General Public License
 EOF
 }
 
+# TODO: MPV does not require parsing anymore, doesn't it? So remove this also
 # Parse time to seconds
 # Input: ss oder hh:mm:ss
 function parse_time() {
@@ -184,13 +184,24 @@ if [ ! -f "$INFILE" ]; then
    exit 1
 fi
 
+# *** Check for output directory, first check is for current directory (returns filename as-is)
+if [ "${OUTFILE}" != "${OUTFILE%/*}" -a ! -d "${OUTFILE%/*}" ]; then
+   echo "Output directory \"${OUTFILE%/*}\" not existing!"
+   exit 1
+fi
+# *** Check for output Extension: Options tweaked for mp4 so this must be selected
+if [ "${OUTFILE##*.}" != "mp4" ]; then
+   echo "Wrong output file extension \"${OUTFILE%/*}\"! Options are tweaked for mp4 output!"
+   exit 1
+fi
 
 # ------------------------------------------------------------------------------
 
 # *** Now execute the action
 
 # *** Determine input material
-VIDEO_WIDTH=$($MIDENTIFY "$INFILE" 2> /dev/null |grep "ID_VIDEO_WIDTH" | cut -c 16-)
+VIDEO_WIDTH=$($MIDENTIFY "$INFILE" 2> /dev/null |grep "^width" | cut -c 7-)
+
 
 # *** Set encoding options
 # Additional encoder options
@@ -198,19 +209,22 @@ MENCODER_MOREOPTS=
 # Descriptive text when used
 MENCODER_MOREOPTS_DESC=
 # Select appropriate bitrate
-# Parameter to tune: vbitrate=bitrate in 1000bits
 # IXUS500: This is for Canon Ixus 500
 case ${MODEL} in
  "actionpro"|"ACTIONPRO"|"X7"|"x7")
   # Actioncam Actionpro X7
   case ${VIDEO_WIDTH} in
    1920)
-     VIDEO_BITRATE=12000
-     AUDIO_BITRATE=64
+     echo "UPDATE VIDEO BITRATE FOR MENCODER->MPV, RECOMMENDED START IS shr 1"
+     exit
+     VIDEO_BITRATE=12000k
+     AUDIO_BITRATE=64k
      ;;
    1280)
-     VIDEO_BITRATE=6000
-     AUDIO_BITRATE=64
+     echo "UPDATE VIDEO BITRATE FOR MENCODER->MPV, RECOMMENDED START IS shr 1"
+     exit
+     VIDEO_BITRATE=6000k
+     AUDIO_BITRATE=64k
      ;;
    *)
      echo "Unknown Input Video Material - Movie Width is ${VIDEO_WIDTH}"
@@ -223,12 +237,14 @@ case ${MODEL} in
   # For Canon Ixus 500
   case ${VIDEO_WIDTH} in
    1920)
-     VIDEO_BITRATE=5000
-     AUDIO_BITRATE=56
+     echo "UPDATE VIDEO BITRATE FOR MENCODER->MPV, RECOMMENDED START IS shr 1"
+     exit
+     VIDEO_BITRATE=5000k
+     AUDIO_BITRATE=56k
      ;;
    640)
-     VIDEO_BITRATE=1800
-     AUDIO_BITRATE=56
+     VIDEO_BITRATE=640k
+     AUDIO_BITRATE=56k
      ;;
    *)
      echo "Unknown Input Video Material - Movie Width is ${VIDEO_WIDTH}"
@@ -239,12 +255,11 @@ case ${MODEL} in
   ;;
  "VHS"|"vhs")
   # For VHS Video PAL Mono Encoding
-  VIDEO_BITRATE=1536
-  AUDIO_BITRATE=56
+  VIDEO_BITRATE=768k
+  AUDIO_BITRATE=56k
   # Cropping and Noise Filtering - Deinterlacing disabled
-  # MENCODER_MOREOPTS="${MENCODER_MOREOPTS} -vf crop=696:552:12:8,pp=lb -noslices"
-  MENCODER_MOREOPTS="${MENCODER_MOREOPTS} -vf crop=696:552:12:8,denoise3d -noslices"
-  #  MENCODER_MOREOPTS="${MENCODER_MOREOPTS} -vf crop=696:552:12:8,hqdn3d -noslices"
+  # mencoder MENCODER_MOREOPTS="${MENCODER_MOREOPTS} -vf crop=696:552:12:8,denoise3d -noslices"
+  MENCODER_MOREOPTS="${MENCODER_MOREOPTS} --vf crop=696:552:12:8,hqdn3d"
   if [ -n "${MENCODER_MOREOPTS_DESC}" ]; then  # Add space and komma
       MENCODER_MOREOPTS_DESC="${MENCODER_MOREOPTS_DESC}, "
   fi
@@ -262,7 +277,7 @@ esac
 # Start time we can take verbatim
 if [ -n "${MOV_START}" ]; then
    # Now build the options
-   MENCODER_MOREOPTS="${MENCODER_MOREOPTS} -ss ${MOV_START}"
+   MENCODER_MOREOPTS="${MENCODER_MOREOPTS} --start ${MOV_START}"
    # Update desc text
    if [ -n "${MENCODER_MOREOPTS_DESC}" ]; then  # Add space and komma
          MENCODER_MOREOPTS_DESC="${MENCODER_MOREOPTS_DESC}, "
@@ -270,6 +285,7 @@ if [ -n "${MOV_START}" ]; then
    MENCODER_MOREOPTS_DESC="${MENCODER_MOREOPTS_DESC}Start Time"
 
    # Both start and endtime are given
+   # TODO: For mpv no distinction is required because of native --end parameter -> Simplify
    if [ -n "${MOV_END}" ]; then
       # Is start smaller than end
       if [ ${MOV_START} -ge ${MOV_END} ]; then
@@ -277,7 +293,8 @@ if [ -n "${MOV_START}" ]; then
           exit 1
       fi
       # Now also build end time
-      MENCODER_MOREOPTS="${MENCODER_MOREOPTS} -endpos $((${MOV_END} - ${MOV_START}))"
+      # mencoder MENCODER_MOREOPTS="${MENCODER_MOREOPTS} -endpos $((${MOV_END} - ${MOV_START}))"
+      MENCODER_MOREOPTS="${MENCODER_MOREOPTS} --end ${MOV_END}"
       # Update desc text
       if [ -n "${MENCODER_MOREOPTS_DESC}" ]; then  # Add space and komma
             MENCODER_MOREOPTS_DESC="${MENCODER_MOREOPTS_DESC}, "
@@ -288,7 +305,7 @@ fi
 # Only end time given, no start
 if [ -n "${MOV_END}" -a -z "${MOV_START}" ]; then
    # Can take end time verbatim
-   MENCODER_MOREOPTS="${MENCODER_MOREOPTS} -endpos ${MOV_END}"
+   MENCODER_MOREOPTS="${MENCODER_MOREOPTS} --end ${MOV_END}"
    # Update desc text
    if [ -n "${MENCODER_MOREOPTS_DESC}" ]; then  # Add space and komma
          MENCODER_MOREOPTS_DESC="${MENCODER_MOREOPTS_DESC}, "
@@ -301,18 +318,26 @@ fi
 # a little bit adjusted. I am sure there is much space for improvement.
 # No audio resampling: -srate 22050
 # Two pass encoding is appended at the end
-MENCODER_OPTS="${MENCODER_MOREOPTS} \
-     -oac mp3lame -lameopts q=0:aq=0:abr:br=${AUDIO_BITRATE}:mode=3 -noskip -mc 0 \
-     -ovc lavc -lavcopts \
-     vcodec=mpeg4:vbitrate=${VIDEO_BITRATE}:mbd=1:mv0:trell:v4mv:cbp:last_pred=3:predia=2:dia=2:vmax_b_frames=2:vb_strategy=1:precmp=2:cmp=2:subcmp=2:preme=2:qns=2:threads=${THREADS}"
-
+# "-noskip -mc 0" is recommended but sometimes leads to a/v desync - thus removed
+# mencoder MENCODER_OPTS="${MENCODER_MOREOPTS} \
+#     -oac mp3lame -lameopts q=0:aq=0:abr:br=${AUDIO_BITRATE}:mode=3 \
+#     -ovc lavc -lavcopts \
+#     vcodec=mpeg4:vbitrate=${VIDEO_BITRATE}:mbd=1:mv0:trell:v4mv:cbp:last_pred=3:predia=2:dia=2:vmax_b_frames=2:vb_strategy=1:precmp=2:cmp=2:subcmp=2:preme=2:qns=2:threads=${THREADS}"
+# TODO: Use mpv's *opts-add for 1/2-pass option
+# Use libvorbis instead of mp3 for audio encoding
+MENCODER_OPTS_PASS1="${MENCODER_MOREOPTS} \
+    --ovc libx264 --ovcopts b=${VIDEO_BITRATE},threads=${THREADS},preset=veryslow,trellis=1,fastfirstpass=1,flags=+pass1 \
+    --audio-channels mono --oac libvorbis --oacopts b=${AUDIO_BITRATE},flags=+pass1"
+MENCODER_OPTS_PASS2="${MENCODER_MOREOPTS} \
+    --ovc libx264 --ovcopts b=${VIDEO_BITRATE},threads=${THREADS},preset=veryslow,trellis=1,flags=+pass2 \
+    --audio-channels mono --oac libvorbis --oacopts b=${AUDIO_BITRATE},flags=+pass2"
 
 # *** Execute shrink ***
 echo
 echo "Converting file ..."
 echo "Selected Coding Model = ${MODEL}"
-echo "Selected bitrate = ${VIDEO_BITRATE} * 1000bit"
-echo "Selected Audio Bitrate = ${AUDIO_BITRATE}kbps"
+echo "Selected bitrate = ${VIDEO_BITRATE}bps"
+echo "Selected Audio Bitrate = ${AUDIO_BITRATE}bps"
 if [ -n "${MENCODER_MOREOPTS_DESC}" ]; then
    echo "Additional Encoding Options = ${MENCODER_MOREOPTS_DESC}"
 fi
@@ -320,11 +345,11 @@ if [ -n "${MOV_START}" -o -n "${MOV_END}" ]; then
    echo "Only encode from ${MOV_START}s to ${MOV_END}s"
 fi
 echo "First pass ..."
-echo $MENCODER ${MENCODER_OPTS}:vpass=1:turbo -o $OUTFILE $INFILE
-$MENCODER ${MENCODER_OPTS}:vpass=1:turbo -o "$OUTFILE" "$INFILE"
+echo $MENCODER ${MENCODER_OPTS_PASS1} -o $OUTFILE $INFILE
+$MENCODER ${MENCODER_OPTS_PASS1} -o "$OUTFILE" "$INFILE"
 echo "Second pass ..."
-echo $MENCODER ${MENCODER_OPTS}:vpass=2 -o $OUTFILE $INFILE
-$MENCODER ${MENCODER_OPTS}:vpass=2 -o "$OUTFILE" "$INFILE"
+echo $MENCODER ${MENCODER_OPTS_PASS2} -o $OUTFILE $INFILE
+$MENCODER ${MENCODER_OPTS_PASS2} -o "$OUTFILE" "$INFILE"
 
 # Error when result file was not created
 if [ ! -f "$OUTFILE" ]; then
@@ -332,8 +357,9 @@ if [ ! -f "$OUTFILE" ]; then
   exit 1
 fi
 
-# Remove statistics file again
-rm divx2pass.log
+# Remove statistics files again
+rm x264_2pass.log x264_2pass.log.mbtree
+rm "${OUTFILE}-vo-lavc-pass1.log"
 
 # *** Print resulting file size ***
 echo
