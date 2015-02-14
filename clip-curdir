@@ -12,7 +12,14 @@ else
   TXT="$PWD"
 fi
 
-echo -n "$TXT" | xclip -selection primary
+
+if [ "${OS}" == "Windows_NT" ]; then
+  # Cygwin
+  echo -n "$TXT" | putclip
+else
+  # Linux
+  echo -n "$TXT" | xclip -selection primary
+fi
 
 echo "Put to middle-click clipoard:"
 echo "$TXT"

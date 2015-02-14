@@ -36,7 +36,13 @@ else
 fi
 
 
-echo -n "$INFILE" | xclip -selection primary
+if [ "${OS}" == "Windows_NT" ]; then
+  # Cygwin
+  echo -n "$INFILE" | putclip
+else
+  # Linux
+  echo -n "$INFILE" | xclip -selection primary
+fi
 
 echo "Put to middle-click clipoard:"
 echo "$INFILE"
