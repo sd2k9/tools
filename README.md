@@ -94,3 +94,11 @@ movie width. Please modify/add in the file your favourite values.
 Language: Bash
 
 Requires: mplayer, mencoder
+
+Gitmode.bash
+------------
+Prepares a "Git-Bash" with git-prompt and git-bash-completions
+
+Language: Bash
+
+Requires: git (obviously)
