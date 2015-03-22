@@ -373,7 +373,7 @@ osm|putosm)
    # Download to etrex with requested name
    STORE_FILE="${MNT_OSM}/gmap_${COMMAND_3P}.img"
    check_file_existence "$STORE_FILE"
-   echo "Writing map to file $STORE_FILE"
+   echo "Writing map $MKGMAP_OUT to file $STORE_FILE"
    # Not in testmode
    [ -z "$TESTMODE" ] && cp -v "$MKGMAP_OUT" "$STORE_FILE"
 
