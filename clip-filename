@@ -23,7 +23,7 @@ fi
 
 if [ $USEWIN -eq 1 ]; then
   # Use windows path instead
-  INFILE="$(cygpath --windows "$INFILE")"
+  INFILE="$(cygpath --absolute --windows "$INFILE")"
 else
    # Canonialize INFILE
    if [[ ${INFILE} == */* ]]; then
