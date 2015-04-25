@@ -32,7 +32,10 @@ GIT_PROMPT_SLOW_MODE=0
 
 # *** git-prompt
 # In case we sourced Gitmode.bash before:
-unalias git
+alias git &> /dev/null
+if [[ $? -eq 0 ]]; then
+   unalias git
+fi
 source /usr/lib/git-core/git-sh-prompt || exit 1
 
 # Configure the git-prompt, see the sourced script for explanations
