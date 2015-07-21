@@ -102,3 +102,11 @@ Prepares a "Git-Bash" with git-prompt and git-bash-completions
 Language: Bash
 
 Requires: git (obviously)
+
+Compare-PDF
+-----------
+Compares two PDF files page by page.
+
+Language: Bash
+
+Requires: Imagemagick

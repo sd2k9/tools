@@ -1,0 +1,262 @@
+#!/bin/bash
+# Compares two PDF files page by page with the help of
+# Imagemagick and pdftk
+# With minor rewrite (TODO) the same approach can also be used
+# to compare images
+# Note: All pages must have the same size, otherwise the comparison fails
+#
+#      Version: See Git
+#  last change: See Git
+#
+#    Copyright (C) 2015 by Robert Lange <sd2k9@sethdepot.org>
+#
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+
+# ------------------------------------------------------------------------------
+
+# *** Settings ***
+# Tools to use
+ICOMPARE_CMD=compare
+ICONVERT_CMD=convert
+PDFINFO_CMD=pdfinfo
+PDFTK_CMD=pdftk
+# Test mode: True when defined (only echo commands) - Set by command line
+TESTMODE=
+# Density to use in conversin operations
+DENSITY="300x300"
+# More options can be added when needed
+# opt opt opt
+
+
+#  To catch failing commands in a pipe, the exit status $? reflects
+#  the last non-zero exit code of any program in the pipe
+set -o pipefail
+#  Treat uninitialised variable as error and exit script
+set -u
+# ------------------------------------------------------------------------------
+# *** Functions ***
+function help_text() {
+cat<<EOF
+Compares two PDF files page by page.
+
+Usage: $(basename $0) [-t|--test|--dry-run] inputfile1.pdf inputfile2.pdf outputfile
+
+inputfile1, inputfile2: PDF files to compare
+outputfile: Base name of the comparison result
+            Do not supply file ending
+-t|--test|--dry-run: Test mode: Echo commands only
+
+The comparison is done with the help of Imagemagick. All pages are
+converted to grayscale and then compared.
+Two output files are created:
+outputfile-stereo.pdf - Comparison in stereo mode
+outputfile-comp.pdf - Comparison with compare tool
+
+Note: All pages must have the same size, otherwise the comparison fails
+
+Used tools: $ICOMPARE_CMD $ICONVERT_CMD $PDFINFO_CMD $PDFTK_CMD
+
+EOF
+}
+
+# Print Versionstring
+function versionstring () {
+# REVISION='$LastChangedRevision$'
+# REVISION=${REVISION#\$LastChangedRevision: }
+# REVISION=${REVISION% \$}
+cat<<EOF
+$(basename $0), Revision DEV
+(c) 2015 by Robert Lange (sd2k9@sethdepot.org)
+Licensed under the GNU General Public License
+
+EOF
+}
+
+# *** Rudimentary command line parsing
+get_options() {
+  local opt
+  local argcounter=1
+
+   # Parse command line for options
+   while [ -n "$*" ]; do
+      opt="$1"
+      shift
+      case $opt in
+      --help | -h) # Help
+         # First print  Versionstring
+         versionstring
+         echo
+         help_text
+         exit
+         ;;
+      --version | -V) # Version
+         echo
+         versionstring
+         exit
+         ;;
+       -t|--test|--dry-run)
+          # Test Mode
+       	  TESTMODE=1
+         ;;
+      *) # Positional options
+     	  case $argcounter in
+      	    1)
+      		INFILE1="$opt"
+      		;;
+      	    2)
+      		INFILE2="$opt"
+      		;;
+      	    3)
+      		OUTFILE="$opt"
+      		;;
+      	    *)
+                # Too many arguments
+  	        echo "Too many arguments! See help text for usage"
+  		exit 1
+  		;;
+      	  esac
+          #increment argument counter
+          let argcounter++
+          ;;
+      esac
+    done
+}
+
+# *** tool there?
+tool_there() {
+  local cmd
+  cmd="$1"
+  shift
+  if [ $(which $cmd > /dev/null) ]; then
+   echo "$cmd executable not found!"
+   exit 1
+  fi
+}
+
+# *** Abort on tool error (errorcode <> 0)
+abort_on_error() {
+    local err
+    err=$1
+    shift
+    if [ $err -ne 0 ]; then
+	   echo "Program execution failed with error code $err!"
+	   echo "Now you have to cleanup the created temporary files by yourself."
+	   exit 1
+    fi
+}
+# *** Execute this tool
+# Caution: Use \"text with spaces\" to escape spaces/special characters
+exec_tool() {
+   echo "$@"
+   if [ -z "$TESTMODE" ]; then
+       eval "$@"
+       abort_on_error $?
+   fi
+}
+
+
+# ------------------------------------------------------------------------------
+# *** Main Program starts here
+
+# *** Call Command Line Parsing
+# Prefill last variable, lotherwise following test will fail
+OUTFILE=""
+# When no options supplied then call help
+if [ -z "$1" ]; then
+    get_options "--help"
+else
+    get_options "$@"
+fi
+
+
+# No or wrong commands supplied
+if [[ -z ${OUTFILE} ]]; then
+    echo "Wrong number of command line options!"
+    echo
+    help_text
+    exit 1
+fi
+
+# *** Check for input files
+if [ ! -f "$INFILE1" ]; then
+   echo "Input file \"$INFILE1\" not existing!"
+   exit 1
+fi
+if [ ! -f "$INFILE2" ]; then
+   echo "Input file \"$INFILE2\" not existing!"
+   exit 1
+fi
+
+# *** Check for tools
+tool_there "$ICOMPARE_CMD"
+tool_there "$ICONVERT_CMD"
+tool_there "$PDFINFO_CMD"
+tool_there "$PDFTK_CMD"
+
+
+
+
+# *** Now execute the action
+# Main body based on
+# http://tex.stackexchange.com/questions/36351/comparing-the-output-of-two-pdfs
+
+# Get page numbers
+PAGES1=$(pdfinfo "$INFILE1" | grep ^Pages: | sed 's/Pages:\s*//')
+abort_on_error $?
+PAGES2=$(pdfinfo "$INFILE2" | grep ^Pages: | sed 's/Pages:\s*//')
+abort_on_error $?
+
+if [[ $PAGES1 > $PAGES2 ]];
+then
+    PAGES=$(($PAGES1-1))
+else
+    PAGES=$(($PAGES2-1))
+fi
+
+# *** Do for very page
+for N in $(seq 0 "$PAGES"); do
+    echo "Comparing page $(($N+1)) / $(($PAGES+1)) ..."
+
+    # Temporary files to use
+    TEMPFILE1[$N]=$(tempfile --prefix comp --suffix=.png)
+    abort_on_error $?
+    TEMPFILE2[$N]=$(tempfile --prefix comp --suffix=.png)
+    abort_on_error $?
+    OUTFILE_STEREO[$N]=$(tempfile --prefix comp --suffix=.pdf)
+    abort_on_error $?
+    OUTFILE_COMPARE[$N]=$(tempfile --prefix comp --suffix=.pdf)
+    abort_on_error $?
+
+    # Convert both pages to grayscale
+    exec_tool convert -density ${DENSITY}  -colorspace gray "$INFILE1[$N]" ${TEMPFILE1[$N]}
+    exec_tool convert -density ${DENSITY}  -colorspace gray "$INFILE2[$N]" ${TEMPFILE2[$N]}
+
+    # Create both comparison images
+    exec_tool composite -stereo 0 -density ${DENSITY} ${TEMPFILE1[$N]} ${TEMPFILE2[$N]} ${OUTFILE_STEREO[$N]}
+    exec_tool compare -metric PSNR -density ${DENSITY} \
+                       ${TEMPFILE1[$N]} ${TEMPFILE2[$N]} ${OUTFILE_COMPARE[$N]}
+done
+
+
+# *** Now combine the pages
+echo "Creating resulting PDF documents ..."
+exec_tool pdftk "${OUTFILE_STEREO[@]}" cat output "${OUTFILE}-stereo.pdf"
+exec_tool pdftk "${OUTFILE_COMPARE[@]}" cat output "${OUTFILE}-compare.pdf"
+
+# *** Cleanup temporary files
+echo "Cleaning temporary files ..."
+for N in $(seq 0 "$PAGES"); do
+    rm -v ${TEMPFILE1[$N]} ${TEMPFILE2[$N]} ${OUTFILE_STEREO[$N]} ${OUTFILE_COMPARE[$N]}
+done
