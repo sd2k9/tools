@@ -80,11 +80,11 @@ utcadjust = int( round( (datetime.datetime.now()-datetime.datetime.utcnow()).tot
 # Beware, when you had the shift between winter and summer time you will be off by one hour!
 
 # *** Just hand this over as seconds to the call for gpscorrelate
-print("gpscorrelate  --timeadd  " + str(utcadjust) + " -t -g " + trackfil + " -v -O " + str(seconds) + " *.jpg *.JPG")
+print("gpscorrelate  --timeadd  " + str(utcadjust) + " -t -g \"" + trackfil + "\" -v -O " + str(seconds) + " *.jpg *.JPG")
 # Alternative: Also include subdirectories
 # subprocess.call("find . -iname \*.jpg -print0 | xargs --null gpscorrelate --timeadd " + str(utcadjust) + " -t -g " + trackfil + " -v -O " + str(seconds), shell=True)
 
-subprocess.call("find . -maxdepth 1 -iname \*.jpg -print0 | xargs --null gpscorrelate --timeadd  " + str(utcadjust) + " -t -g " + trackfil + " -v -O " + str(seconds), shell=True)
+subprocess.call("find . -maxdepth 1 -iname \*.jpg -print0 | xargs --null gpscorrelate --timeadd  " + str(utcadjust) + " -t -g \"" + trackfil + "\" -v -O " + str(seconds), shell=True)
 
 
 # Status infos
