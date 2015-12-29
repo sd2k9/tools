@@ -91,8 +91,10 @@ fi
 
 # *** git-completion.bash, bash completion module
 source /usr/share/bash-completion/completions/git || exit 1
-# Also for Git
-__git_complete Git __git_main
+if [ $GIT_PROMPT_SLOW_MODE -eq 1 ]; then
+    # In slow mode, also complete for Git
+    __git_complete Git __git_main
+fi
 
 # *** Done
 echo "Loaded git prompt and bash completion, hope you sourced me!"
