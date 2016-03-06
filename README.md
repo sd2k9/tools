@@ -8,7 +8,7 @@ dedicate project, but maybe enough to be of interest to others too.
 alice-box-control
 -----------------
 Controls an Alice DSL Router Box
-Supported type: o2 Box 4421
+Supported type: o2 Box 4421, o2 Box 6132
 
 Actions
 - Login to maintenance web page
