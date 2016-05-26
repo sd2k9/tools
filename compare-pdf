@@ -30,10 +30,13 @@
 # Tools to use
 ICOMPARE_CMD=compare
 ICONVERT_CMD=convert
+IIDENTIFY_CMD=identify
 PDFINFO_CMD=pdfinfo
 PDFTK_CMD=pdftk
 # Test mode: True when defined (only echo commands) - Set by command line
 TESTMODE=
+# Enables crop function when defined - Set by command line
+CROP=
 # Density to use in conversin operations
 DENSITY="300x300"
 # More options can be added when needed
@@ -51,12 +54,14 @@ function help_text() {
 cat<<EOF
 Compares two PDF files page by page.
 
-Usage: $(basename $0) [-t|--test|--dry-run] inputfile1.pdf inputfile2.pdf outputfile
+Usage: $(basename $0) [-t|--test|--dry-run] [--crop] inputfile1.pdf inputfile2.pdf [outputfile]
 
 inputfile1, inputfile2: PDF files to compare
-outputfile: Base name of the comparison result
+outputfile: Base name of the comparison result, default ist "cmp"
             Do not supply file ending
 -t|--test|--dry-run: Test mode: Echo commands only
+--crop: When the image sizes differ, crop the larger image to the smaller size
+        This function is only useful when the image size differs just by some pixels
 
 The comparison is done with the help of Imagemagick. All pages are
 converted to grayscale and then compared.
@@ -66,7 +71,7 @@ outputfile-comp.pdf - Comparison with compare tool
 
 Note: All pages must have the same size, otherwise the comparison fails
 
-Used tools: $ICOMPARE_CMD $ICONVERT_CMD $PDFINFO_CMD $PDFTK_CMD
+Used tools: $ICOMPARE_CMD $ICONVERT_CMD $IIDENTIFY_CMD $PDFINFO_CMD $PDFTK_CMD
 
 EOF
 }
@@ -110,6 +115,11 @@ get_options() {
           # Test Mode
        	  TESTMODE=1
          ;;
+       --crop)
+          # Enable Crop
+       	  CROP=1
+	  echo "Warning: Crop Mode Enabled. Do not use on resized images."
+         ;;
       *) # Positional options
      	  case $argcounter in
       	    1)
@@ -152,8 +162,18 @@ abort_on_error() {
     shift
     if [ $err -ne 0 ]; then
 	   echo "Program execution failed with error code $err!"
-	   echo "Now you have to cleanup the created temporary files by yourself."
-	   exit 1
+       if [[ -n "$PAGES" ]]; then
+         echo "Cleaning temporary files ..."
+         for N in $(seq 0 "$PAGES"); do
+	     # Checks: Does this index exists, is the string not empty, does this file exists
+	     IDX_PLUS_ONE=$(($N+1))
+	     [[ ${#TEMPFILE1[@]} -ge $IDX_PLUS_ONE && -n "${TEMPFILE1[$N]}" && -f "${TEMPFILE1[$N]}" ]] && rm -v ${TEMPFILE1[$N]}
+	     [[ ${#TEMPFILE2[@]} -ge $IDX_PLUS_ONE && -n "${TEMPFILE2[$N]}" && -f "${TEMPFILE2[$N]}" ]] && rm -v ${TEMPFILE2[$N]}
+	     [[ ${#OUTFILE_STEREO[@]} -ge $IDX_PLUS_ONE && -n "${OUTFILE_STEREO[$N]}" && -f "${OUTFILE_STEREO[$N]}" ]] &&  rm -v ${OUTFILE_STEREO[$N]}
+	     [[ ${#OUTFILE_COMPARE[@]} -ge $IDX_PLUS_ONE && -n "${OUTFILE_COMPARE[$N]}" && -f "${OUTFILE_COMPARE[$N]}" ]] &&  rm -v ${OUTFILE_COMPARE[$N]}
+	 done
+	 exit 1
+       fi
     fi
 }
 # *** Execute this tool
@@ -182,11 +202,16 @@ fi
 
 
 # No or wrong commands supplied
-if [[ -z ${OUTFILE} ]]; then
+if [[ -z ${INFILE2} ]]; then
     echo "Wrong number of command line options!"
     echo
     help_text
     exit 1
+fi
+
+# Default for Output file
+if [[ -z ${OUTFILE} ]]; then
+    OUTFILE=cmp
 fi
 
 # *** Check for input files
@@ -202,6 +227,7 @@ fi
 # *** Check for tools
 tool_there "$ICOMPARE_CMD"
 tool_there "$ICONVERT_CMD"
+tool_there "$IIDENTIFY_CMD"
 tool_there "$PDFINFO_CMD"
 tool_there "$PDFTK_CMD"
 
@@ -239,21 +265,41 @@ for N in $(seq 0 "$PAGES"); do
     OUTFILE_COMPARE[$N]=$(tempfile --prefix comp --suffix=.pdf)
     abort_on_error $?
 
+    # When Crop is enabled, build a crop parameter, otherwise no cropping is neede
+    if [[ -z "$TESTMODE" && -n "$CROP" ]]; then
+ 	 # Get width and height of both images
+	 IN1_W=$(${IIDENTIFY_CMD} -density ${DENSITY} -format "%w" "$INFILE1[$N]")
+	 IN2_W=$(${IIDENTIFY_CMD} -density ${DENSITY} -format "%w" "$INFILE2[$N]")
+	 IN1_H=$(${IIDENTIFY_CMD} -density ${DENSITY} -format "%h" "$INFILE1[$N]")
+	 IN2_H=$(${IIDENTIFY_CMD} -density ${DENSITY} -format "%h" "$INFILE2[$N]")
+	 # Assign smallest value to IN1_?
+	 if [[ $IN2_W -lt $IN1_W ]]; then
+	     IN1_W=$IN2_W
+	 fi
+	 if [[ $IN2_H -lt $IN1_H ]]; then
+	     IN1_H=$IN2_H
+	 fi
+	 # Build crop argument
+	 CROP_ARG="-crop ${IN1_W}x${IN1_H}+0+0 +repage"
+    else
+	CROP_ARG=
+    fi
+
     # Convert both pages to grayscale
-    exec_tool convert -density ${DENSITY}  -colorspace gray "$INFILE1[$N]" ${TEMPFILE1[$N]}
-    exec_tool convert -density ${DENSITY}  -colorspace gray "$INFILE2[$N]" ${TEMPFILE2[$N]}
+    exec_tool ${ICONVERT_CMD} -density ${DENSITY} -colorspace gray "$INFILE1[$N]" ${CROP_ARG} ${TEMPFILE1[$N]}
+    exec_tool ${ICONVERT_CMD} -density ${DENSITY} -colorspace gray "$INFILE2[$N]" ${CROP_ARG} ${TEMPFILE2[$N]}
 
     # Create both comparison images
     exec_tool composite -stereo 0 -density ${DENSITY} ${TEMPFILE1[$N]} ${TEMPFILE2[$N]} ${OUTFILE_STEREO[$N]}
-    exec_tool compare -metric PSNR -density ${DENSITY} \
+    exec_tool ${ICOMPARE_CMD} -metric PSNR -density ${DENSITY} \
                        ${TEMPFILE1[$N]} ${TEMPFILE2[$N]} ${OUTFILE_COMPARE[$N]}
 done
 
 
 # *** Now combine the pages
 echo "Creating resulting PDF documents ..."
-exec_tool pdftk "${OUTFILE_STEREO[@]}" cat output "${OUTFILE}-stereo.pdf"
-exec_tool pdftk "${OUTFILE_COMPARE[@]}" cat output "${OUTFILE}-compare.pdf"
+exec_tool ${PDFTK_CMD} "${OUTFILE_STEREO[@]}" cat output "${OUTFILE}-stereo.pdf"
+exec_tool ${PDFTK_CMD} "${OUTFILE_COMPARE[@]}" cat output "${OUTFILE}-compare.pdf"
 
 # *** Cleanup temporary files
 echo "Cleaning temporary files ..."
