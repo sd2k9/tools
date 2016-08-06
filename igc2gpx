@@ -136,7 +136,7 @@ if [ $? -ne 0 ]; then
 fi
 # Keep only GPS data
 echo "Stripping Non-GPS (PRESALTTRK) data ..."
-echo "$GPX_DATA" |  perl -e 'my $mt=""; while (<>) { $mt .= $_; }; $mt =~ s|<trk>[\s\n]*<name>PRESALTTRK</name>.+?</trk>||s; print $mt' > $GPX_FILE
+echo "$GPX_DATA" |  perl -e 'my $mt=""; while (<>) { $mt .= $_; }; $mt =~ s|<trk>[\s\n]*<name>PRESALTTRK</name>.+?</trk>||s; print $mt' > "$GPX_FILE"
 
 if [ $? -ne 0 ]; then
     echo "Failure invoking perl - Aborting"
