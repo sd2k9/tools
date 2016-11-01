@@ -65,7 +65,7 @@ MKGMAP_OUT="gmapsupp.img"
 #    shift
 
 # tool there?
-tool_there() {
+function tool_there() {
   local cmd
   cmd="$1"
   shift
@@ -75,7 +75,7 @@ tool_there() {
   fi
 }
 # Abort on tool error (errorcode <> 0)
-abort_on_error() {
+function abort_on_error() {
     local err
     err=$1
     shift
@@ -86,7 +86,7 @@ abort_on_error() {
 }
 # Execute this tool
 # Caution: Use \"text with spaces\" to escape spaces
-exec_tool() {
+function exec_tool() {
    echo "$@"
    if [ -z "$TESTMODE" ]; then
        eval "$@"
@@ -94,7 +94,7 @@ exec_tool() {
    fi
 }
 # Create a symbolic link within the correct directory
-exec_ln() {
+function exec_ln() {
     local ifil
     # Resolve input file to absolute path
     ifil=$(readlink -f "$1")
@@ -109,7 +109,7 @@ exec_ln() {
     exec_tool popd
 }
 # gpx Mount Point there?
-gpx_mount_point_there() {
+function gpx_mount_point_there() {
   if [ ! -d "$MNT_GPX" ]; then
    echo "GPX/ mount point below $MNT_GPX not found!"
    # Ignore in testmode
@@ -118,7 +118,7 @@ gpx_mount_point_there() {
 }
 
 # Does this file already exists?
-check_file_existence() {
+function check_file_existence() {
   local fil
   fil="$1"
   shift
@@ -129,6 +129,17 @@ check_file_existence() {
   fi
 }
 
+# Isolate file basename, i.e. strip path and extension
+function filename_base () {
+    local fil
+    fil="$1"
+    shift
+    local rval
+    rval=${fil##*/}    # Strip path
+    rval=${rval%%.*}   # Strip extension
+    # Pseudo-Return
+    echo "$rval"
+}
 
 # *** Kommandozeile auswerten
 get_options() {
@@ -163,9 +174,10 @@ get_options() {
           echo "        [-V|--version] - Print program version and exit"
           echo
           echo "Download a GPS Track"
-	  echo "  Command: (put)track routename gpx_or_google_maps_url"
+	  echo "  Command: (put)track file.gpx [routename]"
 	  echo "  Downloads the specified route file to the GPS"
 	  echo "  The track can be compressed with xz."
+	  echo "  When no routename is specified, use the gpx file basename."
 	  echo "  Conversion is done with ${MAP2NAVI}"
           echo
           echo "Download a list of points"
@@ -176,17 +188,21 @@ get_options() {
 	  echo "  Conversion is done with ${GPSBABEL}"
 	  echo
           echo "Download a OSM Map"
-	  echo "  Command: (put)osm map.osm[.xz] title shorttitle"
+	  echo "  Command: (put)osm map.osm[.xz] [title] [shorttitle]"
 	  echo "  Downloads the specified OSM Map file to the GPS by the name gmap_<shorttitle>.img"
 	  echo "  with the supplied title and the map file name on the device."
 	  echo "  The input OSM file can be compressed with xz."
+	  echo "  When no shorttitle is given use the title instead."
+	  echo "  When no title is given use the osm map file basename instead."
 	  echo "  Conversion is done with ${MKGMAP}"
 	  echo
           echo "Combine a OSM Map with Topographic overlay and Download it"
-	  echo "  Command: (put)topo map.osm[.xz] topo.osm[.xz|.gz] title shorttitle"
+	  echo "  Command: (put)topo map.osm[.xz] topo.osm[.xz|.gz] [title] [shorttitle]"
 	  echo "  Combine the specified OSM Map file with the provided topographic overlay and"
           echo "  download it to the GPS with the supplied title by the name gmap_<shorttitle>.img"
 	  echo "  The input OSM files can be compressed with xz or gzip."
+	  echo "  When no shorttitle is given use the title instead."
+	  echo "  When no title is given use the osm map file basename instead."
 	  echo "  Merging and conversion is done with ${MKGMAP}"
           echo
           echo "Beautify/Make a GPX file human-readable"
@@ -247,21 +263,28 @@ track|puttrack)
 
    # Check for GPX Mount point
    gpx_mount_point_there
-   # Does the input parameters exists?
-   if [ -z "$COMMAND_2P" ]; then
-     echo "No options supplied to command!"
+   # Does the input file name exists?
+   if [ -z "$COMMAND_1P" ]; then
+     echo "Wrong options supplied to command!"
      exit 1
     fi
 
+   # Routename is 2nd argument, when exists
+   if [ -n "$COMMAND_2P" ]; then
+       ROUTENAME=${COMMAND_2P}
+   else
+       # Otherwise it's the GPX file basename
+       ROUTENAME=$(filename_base ${COMMAND_1P})
+   fi
    # Prepare for Garmin - use intermediate temporary file
    INFILE=$(tempfile --suffix=.gpx)
    # When required decompress input file
-   if [ "${COMMAND_2P##*.}" == "xz" ]; then
+   if [ "${COMMAND_1P##*.}" == "xz" ]; then
        echo "Extracting compressed track file ..."
-       echo "xz -d -c ${COMMAND_2P} > $INFILE"
+       echo "xz -d -c ${COMMAND_1P} > $INFILE"
        # Not in testmode
        if [ -z "$TESTMODE" ]; then
-	   xz -d -c "${COMMAND_2P}" > "$INFILE"
+	   xz -d -c "${COMMAND_1P}" > "$INFILE"
 	   ERR=$?
 	   if [ $ERR -ne 0 ]; then
 	       echo "Program execution failed with error code $ERR!"
@@ -271,20 +294,22 @@ track|puttrack)
    else
        # Use the file verbatim; make link for it (remove our tempfile first)
        exec_tool  rm  "$INFILE"
-       exec_ln "$COMMAND_2P" "$INFILE"
+       exec_ln "$COMMAND_1P" "$INFILE"
    fi
 
    # Convert using map2navi
-   echo "$MAP2NAVI --stdout $COMMAND_1P $INFILE"
-   GPXFILE=$($MAP2NAVI --stdout "$COMMAND_1P" "$INFILE")
-   ERR=$?
-   if [ $ERR -ne 0 ]; then
-       echo "Program execution failed with error code $ERR!"
-       exit 1
+   echo "$MAP2NAVI --stdout $ROUTENAME $INFILE"
+   if [ -z "$TESTMODE" ]; then
+       GPXFILE=$($MAP2NAVI --stdout "$ROUTENAME" "$INFILE")
+       ERR=$?
+       if [ $ERR -ne 0 ]; then
+	   echo "Program execution failed with error code $ERR!"
+	   exit 1
+       fi
    fi
 
    # Download to GPX with routename date
-   GPX_STORE_FILE="$MNT_GPX/${COMMAND_1P}.gpx"
+   GPX_STORE_FILE="$MNT_GPX/${ROUTENAME}.gpx"
    check_file_existence "$GPX_STORE_FILE"
    echo "Writing track to file $GPX_STORE_FILE"
    # Not in testmode
@@ -329,21 +354,38 @@ osm|putosm)
 
    # Check for GPX Mount point
    gpx_mount_point_there
-   # Does the input parameters exists?
-   if [ -z "$COMMAND_3P" ]; then
+   # Does at least the input file exists?
+   if [ -z "$COMMAND_1P" ]; then
      echo "No options (or not enough) supplied to command!"
      exit 1
+   fi
+
+   # Arguments
+   OSM_FILE=$COMMAND_1P
+   if [ -n "$COMMAND_2P" ]; then
+       # Title is given
+       OSM_TITLE=$COMMAND_2P
+   else
+       # Get title (and short title) from file name
+       OSM_TITLE=$(filename_base "$OSM_FILE")
+   fi
+   if [ -n "$COMMAND_3P" ]; then
+       # Short Title is given
+       OSM_SHORT_TITLE=$COMMAND_3P
+   else
+       # title is also short title
+       OSM_SHORT_TITLE=$OSM_TITLE
    fi
 
    # Prepare for Garmin - use intermediate temporary file
    INFILE=$(tempfile --suffix=.osm)
    # When required, decompress xz'ed OSM file
-   if [ "${COMMAND_1P##*.}" == "xz" ]; then
+   if [ "${OSM_FILE##*.}" == "xz" ]; then
        echo "Extracting compressed OSM file ..."
-       echo "xz -d -c ${COMMAND_1P} > $INFILE"
+       echo "xz -d -c ${OSM_FILE} > $INFILE"
        # Not in testmode
        if [ -z "$TESTMODE" ]; then
-	   xz -d -c "${COMMAND_1P}" > "$INFILE"
+	   xz -d -c "${OSM_FILE}" > "$INFILE"
 	   ERR=$?
 	   if [ $ERR -ne 0 ]; then
 	       echo "Program execution failed with error code $ERR!"
@@ -353,7 +395,7 @@ osm|putosm)
    else
        # Use the file verbatim; make link for it (remove our tempfile first)
        exec_tool  rm  "$INFILE"
-       exec_ln "$COMMAND_1P" "$INFILE"
+       exec_ln "$OSM_FILE" "$INFILE"
    fi
 
 
@@ -362,16 +404,16 @@ osm|putosm)
    check_file_existence "/tmp/$MKGMAP_OUT"
    # Get a random number for the map name; each map need an unique number with 8 digits
    MAPNUM="$(printf  '%.4d' $(( $RANDOM % 10000 )) )$(printf  '%.4d' $(( $RANDOM % 10000 )) )"
-   exec_tool mkgmap -n $MAPNUM --description=\"$COMMAND_2P\" --latin1 --gmapsupp \
+   exec_tool mkgmap -n $MAPNUM --description=\"$OSM_TITLE\" --latin1 --gmapsupp \
       	               --remove-short-arcs=3 --route \
     		       "$INFILE"
-   if [ ! -f "$MKGMAP_OUT" ]; then
+   if [ -z "$TESTMODE" -a ! -f "$MKGMAP_OUT" ]; then
      echo "File $MKGMAP_OUT did not got created! Something went wrong!"
      exit 1
    fi
 
    # Download to etrex with requested name
-   STORE_FILE="${MNT_OSM}/gmap_${COMMAND_3P}.img"
+   STORE_FILE="${MNT_OSM}/gmap_${OSM_SHORT_TITLE}.img"
    check_file_existence "$STORE_FILE"
    echo "Writing map $MKGMAP_OUT to file $STORE_FILE"
    # Not in testmode
@@ -380,7 +422,7 @@ osm|putosm)
    # Remove temporary files again
    echo "Removing temp files again ..."
    exec_tool rm -v  \"/tmp/$MKGMAP_OUT\"
-   if [ "${COMMAND_1P##*.}" == "xz" ]; then
+   if [ "${OSM_FILE##*.}" == "xz" ]; then
        exec_tool rm -v \"$INFILE\"
    fi
    ;;
@@ -392,9 +434,27 @@ topo|puttopo|osmtopo|putosmtopo)
    # Check for GPX Mount point
    gpx_mount_point_there
    # Does the input parameters exists?
-   if [ -z "$COMMAND_4P" ]; then
+   if [ -z "$COMMAND_2P" ]; then
      echo "No options (or not enough) supplied to command!"
      exit 1
+   fi
+
+   # Arguments
+   OSM_FILE=$COMMAND_1P
+   TOPO_FILE=$COMMAND_2P
+   if [ -n "$COMMAND_3P" ]; then
+       # Title is given
+       OSM_TITLE=$COMMAND_3P
+   else
+       # Get title (and short title) from file name
+       OSM_TITLE=$(filename_base "$OSM_FILE")
+   fi
+   if [ -n "$COMMAND_4P" ]; then
+       # Short Title is given
+       OSM_SHORT_TITLE=$COMMAND_4P
+   else
+       # title is also short title
+       OSM_SHORT_TITLE=$OSM_TITLE
    fi
 
    # Use this parameter to create/not create a file/directory with mktemp
@@ -417,44 +477,44 @@ topo|puttopo|osmtopo|putosmtopo)
    # abort_on_error $?
 
    # When required, decompress xz'ed OSM file
-   if [ "${COMMAND_1P##*.}" == "xz" ]; then
+   if [ "${OSM_FILE##*.}" == "xz" ]; then
        echo "Extracting compressed OSM file ..."
        INFILEOSM="${WORKDIR}/60000000.osm"
-       echo "xz -d -c ${COMMAND_1P} > $INFILEOSM"
+       echo "xz -d -c ${OSM_FILE} > $INFILEOSM"
        # Not in testmode
        if [ -z "$TESTMODE" ]; then
-	   xz -d -c "${COMMAND_1P}" > "$INFILEOSM"
+	   xz -d -c "${OSM_FILE}" > "$INFILEOSM"
 	   abort_on_error $?
        fi
-   elif [ "${COMMAND_1P##*.}" == "gz" ]; then
+   elif [ "${OSM_FILE##*.}" == "gz" ]; then
        # Just link the GZ file, mkgmap can handle it
        INFILETOPO="${WORKDIR}/60000000.osm.gz"
-       exec_ln "$COMMAND_1P" "$INFILETOPO"
+       exec_ln "$OSM_FILE" "$INFILETOPO"
    else
        # Use the file verbatim; make link for it
        INFILEOSM="${WORKDIR}/60000000.osm"
-       exec_ln "$COMMAND_1P" "$INFILEOSM"
+       exec_ln "$OSM_FILE" "$INFILEOSM"
    fi
    # Same for xz'ed Topo OSM file
    # INFILETOPO=$(mktemp --tmpdir=${WORKDIR} $MKTEMPDRYRUNPARA infiletopoXXXX.osm)
    # abort_on_error $?
-   if [ "${COMMAND_2P##*.}" == "xz" ]; then
+   if [ "${TOPO_FILE##*.}" == "xz" ]; then
        echo "Extracting compressed Topographic Overlay OSM file ..."
        INFILETOPO="${WORKDIR}/50000000.osm"
-       echo "xz -d -c ${COMMAND_2P} > $INFILETOPO"
+       echo "xz -d -c ${TOPO_FILE} > $INFILETOPO"
        # Not in testmode
        if [ -z "$TESTMODE" ]; then
-	   xz -d -c "${COMMAND_2P}" > "$INFILETOPO"
+	   xz -d -c "${TOPO_FILE}" > "$INFILETOPO"
 	   abort_on_error $?
        fi
-   elif [ "${COMMAND_2P##*.}" == "gz" ]; then
+   elif [ "${TOPO_FILE##*.}" == "gz" ]; then
        # Just link the GZ file, mkgmap can handle it
        INFILETOPO="${WORKDIR}/50000000.osm.gz"
-       exec_ln "$COMMAND_2P" "$INFILETOPO"
+       exec_ln "$TOPO_FILE" "$INFILETOPO"
    else
        # Use the file verbatim; make link for it
        INFILETOPO="${WORKDIR}/50000000.osm"
-       exec_ln "$COMMAND_2P" "$INFILETOPO"
+       exec_ln "$TOPO_FILE" "$INFILETOPO"
    fi
 
    # Work under temporary directory
@@ -466,7 +526,7 @@ topo|puttopo|osmtopo|putosmtopo)
    MAPNUM="$(printf  '%.4d' $(( $RANDOM % 10000 )) )$(printf  '%.4d' $(( $RANDOM % 10000 )) )"
 
    # Do everything in one step, single conversion as given by OSM Wiki does not work --> gmapsupp.img
-   exec_tool mkgmap --verbose -n $MAPNUM --description=\"$COMMAND_3P\" --latin1 --gmapsupp \
+   exec_tool mkgmap --verbose -n $MAPNUM --description=\"$OSM_TITLE\" --latin1 --gmapsupp \
       	               --remove-short-arcs=3 --route \
                        --family-id=60 --family-name=\"OSM\"  --product-id=1 \
                           --draw-priority=25 \"$INFILEOSM\" \
@@ -478,7 +538,7 @@ topo|puttopo|osmtopo|putosmtopo)
    fi
 
    # Download to etrex with requested name
-   STORE_FILE="${MNT_OSM}/gmap_${COMMAND_4P}.img"
+   STORE_FILE="${MNT_OSM}/gmap_${OSM_SHORT_TITLE}.img"
    check_file_existence "$STORE_FILE"
    echo "Writing map to file $STORE_FILE"
    # Not in testmode
