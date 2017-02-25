@@ -7,7 +7,7 @@
 #  last change: $Date$
 #      Version: $Name:$
 #
-#     Copyright (C) 2013 Robert Lange <sd2k9@sethdepot.org>
+#     Copyright (C) 2013,2017 Robert Lange <sd2k9@sethdepot.org>
 #
 #     This program is free software: you can redistribute it and/or modify
 #     it under the terms of the GNU General Public License as published by
@@ -76,13 +76,13 @@ class OutputQuotedPrintable:
 
 
 # ********************************************************************************
-def csv2vcard(inf, outf):
+def csv2vcard(inf, outf, gnokii=False):
     """ Converts Thunderbird CSV to VCard
 
     Arguments
-       inf:  input csv file as file object
+        inf: input csv file as file object
        outf: output vcard file as file object (stdout et al is also possible as file object)
-
+     gnokii: When true write VCard format suitable for gnokii
 
     Returns: 0 on Success, otherwise error code > 0
 
@@ -101,28 +101,57 @@ def csv2vcard(inf, outf):
     outqp = OutputQuotedPrintable(outf)
 
     for row in reader:
-        outqp.write('BEGIN', 'VCARD')
-        outqp.write('VERSION', '2.1')
-        # Name, Formatted Name
-        # DEBUG: print(row)
-        outqp.write('N', row[1] + ';' + row[0])
-        if row[2]:  # Use Display name
+       if gnokii:
+          # gnokii special format
+          outqp.write('BEGIN', 'VCARD')
+          outqp.write('VERSION', '3.0')
+          # Name, Formatted Name
+          # DEBUG: print(row)
+          outqp.write('N', row[1] + ';' + row[0])
+          if row[2]:  # Use Display name
             outqp.write('FN', row[2])
-        else:       # Build ourself
+          else:       # Build ourself
             outqp.write('FN', row[0] + ' ' + row[1])
-        # Phones
-        if row[7]:    # Work Phone
+          # Phones
+          if row[7]:    # Work Phone
+            outqp.write('TEL;TYPE=WORK',  row[7].replace("-"," "))
+          if row[8]:    # Home Phone
+            outqp.write('TEL;TYPE=HOME', row[8].replace("-"," "))
+          if row[11]:    # Mobile
+            outqp.write('TEL;TYPE=CELL', row[11].replace("-"," "))
+          # Emails
+          if row[4]:    # Primary EMail
+            outqp.write('EMAIL;TYPE=INTERNET',  row[4])
+          if row[5]:    # Secondary EMail
+            outqp.write('EMAIL;TYPE=INTERNET',  row[5])
+          if row[36]:    # Note
+            outqp.write('NOTE',  row[36])
+          outqp.write('END', 'VCARD\n')
+       else:
+          outqp.write('BEGIN', 'VCARD')
+          outqp.write('VERSION', '2.1')
+          # Name, Formatted Name
+          # DEBUG: print(row)
+          outqp.write('N', row[1] + ';' + row[0])
+          if row[2]:  # Use Display name
+            outqp.write('FN', row[2])
+          else:       # Build ourself
+            outqp.write('FN', row[0] + ' ' + row[1])
+          # Phones
+          if row[7]:    # Work Phone
             outqp.write('TEL;WORK',  row[7])
-        if row[8]:    # Home Phone
+          if row[8]:    # Home Phone
             outqp.write('TEL;HOME', row[8])
-        if row[11]:    # Mobile
+          if row[11]:    # Mobile
             outqp.write('TEL;CELL', row[11])
-        # Emails
-        if row[4]:    # Primary EMail
+          # Emails
+          if row[4]:    # Primary EMail
             outqp.write('EMAIL;HOME',  row[4])
-        if row[5]:    # Secondary EMail
+          if row[5]:    # Secondary EMail
             outqp.write('EMAIL;OTHER',  row[5])
-        outqp.write('END', 'VCARD\n')
+          if row[36]:    # Note
+            outqp.write('NOTE',  row[36])
+          outqp.write('END', 'VCARD\n')
 
 
     # *** Finally done
@@ -167,6 +196,8 @@ The Vcard file then can be used e.g. to import the contacts into an Android phon
     cmd_parser.add_argument('infile', help='Input file name, Exported thunderbird addressbook data in CSV format', metavar='inputfile')
     cmd_parser.add_argument('-o', '--output', dest='outfile', required=False, action=Once,
                                   help='Output file name, when not given print to screen (Use extension .vcf for Android)', metavar='file')
+    cmd_parser.add_argument('--gnokii', dest='gnokii', action='store_true',
+                        default=False, help='Write vcard suitable for gnokii')
     cmd_parser.add_argument('-V', '--version', action='version', version=cmd_version)
     cmd_parser.add_argument('--quiet', '-q', dest='quiet', action='store_true',
                         default=False, help='Quiet Output')
@@ -201,7 +232,7 @@ The Vcard file then can be used e.g. to import the contacts into an Android phon
             outfile=sys.stdout
 
         # Call the worker function
-        rv = csv2vcard(inf=infile, outf=outfile)
+        rv = csv2vcard(inf=infile, outf=outfile, gnokii=cmd_line.gnokii)
 
         # Cleanup, in case we opened output file
         if cmd_line.outfile:
