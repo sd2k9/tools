@@ -50,6 +50,7 @@ model: Bitrate presets for encoding
        ACTIONPRO: Actionpro X7 camera
        IXUS500: Canon Ixus 500
        VHS: VHS Mono PAL Video
+       SEND: Send videos created with a Panasonic LX7 camera
 
 inputfile: File to shrink
 outputfile.mp4: Resulting file, Format is MP4
@@ -237,9 +238,9 @@ case ${MODEL} in
   # For Canon Ixus 500
   case ${VIDEO_WIDTH} in
    1920)
-     echo "UPDATE VIDEO BITRATE FOR MENCODER->MPV, RECOMMENDED START IS shr 1"
-     exit
-     VIDEO_BITRATE=5000k
+     echo "Re-CHECK VIDEO BITRATE FOR MENCODER->MPV, NOW JUST SOME TRIAL VALUES"
+     sleep 3s
+     VIDEO_BITRATE=2048k
      AUDIO_BITRATE=56k
      ;;
    1280)
@@ -255,6 +256,17 @@ case ${MODEL} in
      echo "Unknown Input Video Material - Movie Width is ${VIDEO_WIDTH}"
      echo "Dunno how to setup video bit rate - Exiting"
      exit
+     ;;
+  esac
+  ;;
+ "SEND"|"send")
+  # For Panasonix LX7 to send around
+  case ${VIDEO_WIDTH} in
+   1920)
+     echo "Re-CHECK VIDEO BITRATE FOR MENCODER->MPV, NOW JUST SOME TRIAL VALUES"
+     sleep 3s
+     VIDEO_BITRATE=1024k
+     AUDIO_BITRATE=56k
      ;;
   esac
   ;;
