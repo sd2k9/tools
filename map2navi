@@ -100,6 +100,7 @@ get_options() {
           echo "Options:"
           echo "  [-h|--help] - This screen"
           echo "  [-V|--version] - Print program version and exit"
+          echo "  [--stdout]  - Instead of downloading output to STDOUT"
           echo "  route_name - Name of the resulting route"
           echo "  url - Google Maps URL from the \"Link\" button"
           echo "        Don't forget to quote this URL"
@@ -189,9 +190,16 @@ fi
 
 
 # *** Rename route
-# Old: But now the "Route" string is dynamic
-# GPXFILE=${GPXFILE//<name>Route<\/name>/<name>${ROUTENAME}<\/name>}
- GPXFILE=$(perl -ne "s|<trk>\s*<name>.*?</name>|<trk><name>${ROUTENAME}</name>|; print;" <<<$GPXFILE)
+# When there's already a name tag just change it
+grep -q "<name>" <<<$GPXFILE
+if [[ $? -eq 1 ]]; then
+    # No name tag yet, so need to add it
+    GPXFILE=$(perl -ne "s|<trk>|<trk><name>${ROUTENAME}</name>|; print;" <<<$GPXFILE)
+else
+    # Old: But now the "Route" string is dynamic
+    # GPXFILE=${GPXFILE//<name>Route<\/name>/<name>${ROUTENAME}<\/name>}
+    GPXFILE=$(perl -ne "s|<trk>\s*<name>.*?</name>|<trk><name>${ROUTENAME}</name>|; print;" <<<$GPXFILE)
+fi
 
 # *** Store to GPS Handheld
 if [ -z "$STDOUT_MODE" ]; then
