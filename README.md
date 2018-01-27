@@ -95,14 +95,6 @@ Language: Bash
 
 Requires: mplayer, mencoder
 
-Gitmode.bash
-------------
-Prepares a "Git-Bash" with git-prompt and git-bash-completions
-
-Language: Bash
-
-Requires: git (obviously)
-
 Compare-PDF
 -----------
 Compares two PDF files page by page.
@@ -110,3 +102,20 @@ Compares two PDF files page by page.
 Language: Bash
 
 Requires: Imagemagick
+
+
+Gitmode.bash
+------------
+Git Helper; Prepares a "Git-Bash" with git-prompt and git-bash-completions
+
+Language: Bash
+
+Requires: git (obviously)
+
+g-mergebranch
+-------------
+Git Helper; Merges a branch and performs branch cleanup afterwards
+
+Language: Bash
+
+Requires: git

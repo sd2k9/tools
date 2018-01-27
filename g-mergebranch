@@ -1,0 +1,122 @@
+#!/bin/bash
+# Function: Merges a branch and performs cleanup afterwards
+#           All steps are queried for continue
+
+# ------------------------------------------------------------------------------
+
+# *** Settings ***
+# Treat uninitialised variable as error and exit script
+set -u
+# Test mode: True when defined (only echo commands)
+TESTMODE=
+
+# ------------------------------------------------------------------------------
+
+# *** Functions ***
+function help_text() {
+cat<<EOF
+Merges a branch a performs cleanup afterwards.
+Change to the target branch yourself before execution.
+
+Steps
+- Merge branch
+- Push
+- Delete local branch name
+- Delete remote brach name
+
+Usage: $(basename $0) branchname
+* branchname: The branch to merge and cleanup
+
+EOF
+}
+
+# Abort on tool error (errorcode <> 0)
+function abort_on_error() {
+    local err
+    err=$1
+    shift
+    if [ $err -ne 0 ]; then
+	   echo "Program execution failed with error code $err!"
+	   exit 1
+    fi
+}
+
+# Execute this tool after confirmation
+# Caution: Use \"text with spaces\" to escape spaces
+function exec_tool_confirm() {
+   local go_on
+   echo -n "Execute (y/N): $@ "
+   read -n 1 go_on
+   echo
+   if [[ $go_on != "y" && $go_on != "Y" ]]; then
+       echo "Abort as requested"
+       exit
+   fi
+
+   if [[ -z "$TESTMODE" ]]; then
+       eval "$@"
+       abort_on_error $?
+   fi
+}
+
+# ------------------------------------------------------------------------------
+
+# *** Rudimentary command line parsing
+# Command line argument
+BRANCHNAME=""
+
+
+# Parse command line for options
+until [ -z "${1-}" ]
+ do
+   # echo "Processing parameter of: '$1'"
+   case $1 in
+   --help | -h) # Help
+      help_text
+      exit
+      ;;
+   *) # Branch Name
+       if [[ -n "$BRANCHNAME" ]]; then
+	   echo "Only one branch name allowed!"
+	   exit 1
+       fi
+       BRANCHNAME="$1"
+      ;;
+   esac
+   shift
+ done
+
+# No branch name supplied
+if [ -z "$BRANCHNAME" ]; then
+    echo "Wrong number of command line options!"
+    echo
+    help_text
+    exit 1
+fi
+
+
+# ------------------------------------------------------------------------------
+
+# *** Now execute actions
+
+echo
+echo "Merge branch $BRANCHNAME ..."
+exec_tool_confirm git merge --no-ff $BRANCHNAME
+
+echo
+echo "Push ..."
+exec_tool_confirm git push
+
+echo
+echo "Delete local branch $BRANCHNAME ..."
+exec_tool_confirm git branch --delete $BRANCHNAME
+
+echo
+echo "Delete remote brach $BRANCHNAME ..."
+exec_tool_confirm git push origin --delete $BRANCHNAME
+
+
+# *** Done
+echo
+echo "Done"
+exit
