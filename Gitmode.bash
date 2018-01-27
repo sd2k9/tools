@@ -46,8 +46,12 @@ GIT_PS1_DESCRIBE_STYLE="branch"
 
 
 # New prompt, use my default as starting point
-# PS1='\[\e]0;\w\a\]\n\[\e[32m\]\w\[\e[0m\]\n${_git_ps_string}$ '
-PS1='\[\e]0;\w\a\]\n\[\e[32m\]\w\n\[\e[0;33m\]${_git_ps_string}\[\e[0m\]$ '
+# PS1='\[\e]0;\w\a\]\n\[\e[32m\]\w\n\[\e[0;33m\]${_git_ps_string}\[\e[0m\]$ '
+# Changed color scheme: Bright
+# PS1='\[\e]0;\w\a\]\n\[\e[92m\]\w\n\[\e[0;95m\]${_git_ps_string}\[\e[0m\]$ '
+# Changed color scheme: Dark
+PS1='\[\e]0;\w\a\]\n\[\e[35m\]\w\n\[\e[1;34m\]${_git_ps_string}\[\e[0m\]$ '
+
 
 # Define function to update the git string
 _update_git_ps_string() {
