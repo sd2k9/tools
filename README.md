@@ -127,3 +127,28 @@ Starts a program minimized
 Original Source: https://askubuntu.com/questions/663187/how-can-i-run-a-program-on-startup-minimized
 
 Language: Python 3
+
+
+gpg-agent-wrapper
+-----------------
+Wrapper for gnupg2's gpg-agent (gpg secret key handling daemon) to kill itself after 30 min.
+Otherwise it will linger forever around in memory, which I don't like.
+
+Enable in ~/.gnupg/gpg.conf:
+agent-program PREFIX/gpg-agent-wrapper
+
+Language: Bash
+
+Requires: gpg-agent > 2
+
+dirmngr-wrapper
+---------------
+Wrapper for gnupg2's dirmngr (gpg keyserver access daemon) to kill itself after 1 min.
+Otherwise it will linger forever around in memory, which I don't like.
+
+Enable in ~/.gnupg/gpg.conf:
+dirmngr-program PREFIX/dirmngr-wrapper
+
+Language: Bash
+
+Requires: dirmngr > 2
