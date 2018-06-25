@@ -8,7 +8,7 @@
 #      Version: See Git
 #  last change: See Git
 #
-#    Copyright (C) 2015 by Robert Lange <sd2k9@sethdepot.org>
+#    Copyright (C) 2015,2016, 2018 by Robert Lange <sd2k9@sethdepot.org>
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -155,12 +155,20 @@ tool_there() {
   fi
 }
 
-# *** Abort on tool error (errorcode <> 0)
+# *** Abort on tool error (errorcode >= limit)
+#     Default limit when not given: 1
 abort_on_error() {
     local err
+    local lim
     err=$1
     shift
-    if [ $err -ne 0 ]; then
+    if [[ $# -eq 0 ]]; then
+      lim=1
+    else
+      lim=$1
+      shift
+    fi
+    if [[ $err -ge $lim ]]; then
 	   echo "Program execution failed with error code $err!"
        if [[ -n "$PAGES" ]]; then
          echo "Cleaning temporary files ..."
@@ -178,11 +186,15 @@ abort_on_error() {
 }
 # *** Execute this tool
 # Caution: Use \"text with spaces\" to escape spaces/special characters
+# First argument is error code limit; return codes greather-or-equal than this value are treated as errors
 exec_tool() {
+   local lim
+   lim=$1
+   shift
    echo "$@"
    if [ -z "$TESTMODE" ]; then
        eval "$@"
-       abort_on_error $?
+       abort_on_error $? $lim
    fi
 }
 
@@ -286,20 +298,20 @@ for N in $(seq 0 "$PAGES"); do
     fi
 
     # Convert both pages to grayscale
-    exec_tool ${ICONVERT_CMD} -density ${DENSITY} -colorspace gray "$INFILE1[$N]" ${CROP_ARG} ${TEMPFILE1[$N]}
-    exec_tool ${ICONVERT_CMD} -density ${DENSITY} -colorspace gray "$INFILE2[$N]" ${CROP_ARG} ${TEMPFILE2[$N]}
+    exec_tool 1 ${ICONVERT_CMD} -density ${DENSITY} -colorspace gray "$INFILE1[$N]" ${CROP_ARG} ${TEMPFILE1[$N]}
+    exec_tool 1 ${ICONVERT_CMD} -density ${DENSITY} -colorspace gray "$INFILE2[$N]" ${CROP_ARG} ${TEMPFILE2[$N]}
 
     # Create both comparison images
-    exec_tool composite -stereo 0 -density ${DENSITY} ${TEMPFILE1[$N]} ${TEMPFILE2[$N]} ${OUTFILE_STEREO[$N]}
-    exec_tool ${ICOMPARE_CMD} -metric PSNR -density ${DENSITY} \
+    exec_tool 1 composite -stereo 0 -density ${DENSITY} ${TEMPFILE1[$N]} ${TEMPFILE2[$N]} ${OUTFILE_STEREO[$N]}
+    exec_tool 2 ${ICOMPARE_CMD} -metric PSNR -density ${DENSITY} \
                        ${TEMPFILE1[$N]} ${TEMPFILE2[$N]} ${OUTFILE_COMPARE[$N]}
 done
 
 
 # *** Now combine the pages
 echo "Creating resulting PDF documents ..."
-exec_tool ${PDFTK_CMD} "${OUTFILE_STEREO[@]}" cat output "${OUTFILE}-stereo.pdf"
-exec_tool ${PDFTK_CMD} "${OUTFILE_COMPARE[@]}" cat output "${OUTFILE}-compare.pdf"
+exec_tool 1 ${PDFTK_CMD} "${OUTFILE_STEREO[@]}" cat output "${OUTFILE}-stereo.pdf"
+exec_tool 1 ${PDFTK_CMD} "${OUTFILE_COMPARE[@]}" cat output "${OUTFILE}-compare.pdf"
 
 # *** Cleanup temporary files
 echo "Cleaning temporary files ..."
