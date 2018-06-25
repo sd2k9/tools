@@ -54,7 +54,7 @@ Converts Thunderbird Addressbook Export from CSV to VCard format.
 The VCard file then can be used e.g. to import the contacts into an Android phone
 addressbook.
 
-Language: Python v3
+Language: Python 3
 
 
 clip-curdir, clip-filename
@@ -119,3 +119,11 @@ Git Helper; Merges a branch and performs branch cleanup afterwards
 Language: Bash
 
 Requires: git
+
+
+start_minimized
+----------------
+Starts a program minimized
+Original Source: https://askubuntu.com/questions/663187/how-can-i-run-a-program-on-startup-minimized
+
+Language: Python 3
