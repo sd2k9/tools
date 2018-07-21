@@ -16,7 +16,8 @@ TESTMODE=
 function help_text() {
 cat<<EOF
 Merges a branch a performs cleanup afterwards.
-Change to the target branch yourself before execution.
+When not specifying targetbranch, change to the target branch
+yourself before execution.
 
 Steps
 - Merge branch
@@ -24,7 +25,8 @@ Steps
 - Delete local branch name
 - Delete remote brach name
 
-Usage: $(basename $0) branchname
+Usage: $(basename $0) [targetbranch] branchname
+* targetbranch: The destination branch for the merge (usually master)
 * branchname: The branch to merge and cleanup
 
 EOF
@@ -62,8 +64,9 @@ function exec_tool_confirm() {
 # ------------------------------------------------------------------------------
 
 # *** Rudimentary command line parsing
-# Command line argument
+# Command line arguments
 BRANCHNAME=""
+TARGETBRANCH=""
 
 
 # Parse command line for options
@@ -75,10 +78,16 @@ until [ -z "${1-}" ]
       help_text
       exit
       ;;
-   *) # Branch Name
+   *) # Branch and Target Name
        if [[ -n "$BRANCHNAME" ]]; then
-	   echo "Only one branch name allowed!"
-	   exit 1
+	   if [[ -n "$TARGETBRANCH" ]]; then
+	       echo "Only one branch name allowed!"
+	       exit 1
+	   else
+	       # Optional target branch name is given
+	       TARGETBRANCH="$BRANCHNAME"
+	       BRANCHNAME="$1"
+	   fi
        fi
        BRANCHNAME="$1"
       ;;
@@ -98,6 +107,12 @@ fi
 # ------------------------------------------------------------------------------
 
 # *** Now execute actions
+
+if [[ -n "$TARGETBRANCH" ]]; then
+    echo
+    echo "Change to destination branch $TARGETBRANCH ..."
+    exec_tool_confirm git checkout $TARGETBRANCH
+fi
 
 echo
 echo "Merge branch $BRANCHNAME ..."
