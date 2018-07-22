@@ -41,6 +41,7 @@ Input can be a Google Maps URL or a GPX file
 
 Language: Bash
 
+
 igc2gpx
 --------
 Convert a IGC track to GPX, keeping only the GPS data
@@ -84,6 +85,7 @@ Language: Python 2
 
 Requires: PIL
 
+
 shrink-vids
 -----------
 Re-encode movies taken from digital cameras to significantly shrink the file size
@@ -94,6 +96,20 @@ movie width. Please modify/add in the file your favourite values.
 Language: Bash
 
 Requires: mplayer, mencoder
+
+
+scanaudio
+---------
+scanaudio reads a directory structure of music files and
+print the found albums to standard out in form of a comma separated list.
+The output can be redirected to create a CSV-file of a music collection.
+Supported Types are flac (metaflac), Ogg Vorbis (vorbiscomment) and
+mp3 (id3v2) files.
+
+Language: Perl
+
+Requires: metaflac, vorbiscomment, id3v2
+
 
 Compare-PDF
 -----------
@@ -111,6 +127,7 @@ Git Helper; Prepares a "Git-Bash" with git-prompt and git-bash-completions
 Language: Bash
 
 Requires: git (obviously)
+
 
 g-mergebranch
 -------------
@@ -140,6 +157,7 @@ agent-program PREFIX/gpg-agent-wrapper
 Language: Bash
 
 Requires: gpg-agent > 2
+
 
 dirmngr-wrapper
 ---------------

@@ -1,0 +1,323 @@
+#!/usr/bin/perl
+
+# file name: ''scanaudio''
+#  project: scanaudio
+# function: scans a directory structure of audio files and generates
+#           a CSV file from the albums found
+#  status: fast hack, marginal testing only
+
+#      created: 29.10.2k4
+#               derived from flac2ogg.pl
+# Copyright (C) 2004-2006,2018 Robert Lange <sd2k9@sethdepot.org>
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# version 3 as published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+
+
+# Known Limitations
+# - Tags and/or Fields are not allowed to include "=" or ": "
+#   (used for separating Tag and Field)
+
+
+
+
+# ******************** MODIFY CUSTOM SETTING BELOW THIS LINE *******************
+# *** global settings ***
+# the tags which should be printed in the CSV-Manner (in lowercase)
+my @tags_to_print = qw/artist album genre/;
+# For mp3's id3v2 required  manual tweaking is now hard-coded, see program code below
+
+# If you're a little bit familiar with perl, you can also modify
+# some of the program's defaults in the options-hash some lines
+# below.
+# **************************** END OF CUSTOM SETTINGS **************************
+# *** DON'T CHANGE ANYTHING BELOW THIS LINE UNTIL YOU KNOW WHAT YOU'RE DOING ***
+
+
+# *** packes to use ***
+use strict;
+use warnings;
+use Getopt::Long;
+use File::Find;
+# *** furter settings needed by the program ***
+
+
+# *** subroutine declarations ***
+# main routine without any arguments
+sub main ();
+# Return version string from svn tag with copyright - obsolete
+sub versionstring ();
+# reads the command line options
+sub read_commandline();
+# do some simple sanity checks
+sub check_options();
+# is called by find to process all the selected files
+sub process_files ();
+
+# *** global variables ***
+my %options = (        # processed options for use in the program
+                       # with defaults, some can be overridden by command line
+   # regexp to identify music files
+	       suffix_files => '(\.ogg|\.flac|\.mp3)$$',
+   # regexp to split tags into Name ($1) and Content Part ($3)
+   # also removes trailing spaces
+	       tag_separation => '^([^=:]+)(=|:\ )(.*?)\s*$',
+
+   # hash with the names of the comment programs per suffix, without dot
+   # (see usage, now a leading dot is implicit assumed)
+   # first program name
+	       gettags_prog => { ogg => "vorbiscomment",
+			    flac => "metaflac",
+			    mp3 => "id3v2"
+			  },
+   # now program options
+	       gettags_opts => { ogg => ["-l"],
+		    flac => ["--no-utf8-convert", "--export-tags-to=-"],
+		    mp3 => ["-R"]
+			  }
+   # Enable Debug, if true                (command line)
+   #	       debug
+);
+my $processdir = "" ;   # stores the last directory a file was read
+                        # we use this to read only one file per directory
+
+# *** global constants ***
+my %exit_codes_meaning = (commandline => 2
+			 );
+# ***************************** Documentation ***************************
+
+
+my $Help_Documentation=<<EOF;
+DESCRIPTION
+
+scanaudio can read a directory structures of music files and
+print the found albums to standard out in form of a comma separated list.
+The output can be redirected to create a CSV-file of a music collection.
+Supported Types are flac (metaflac), Ogg Vorbis (vorbiscomment) and
+mp3 (id3v2) files.
+
+The printed fields are:  artist, album, genre, path
+path means path to the directory storing the files.
+
+scanaudio assumes that every directory contains exactly one album, therefore
+only one file in every directory is examined and its comments taken.
+
+
+USAGE
+
+     scanaudio [options] dir1 dir2 dir3 ...
+
+       --help, -h                    This help screen
+       --version, -V                 Version
+
+     Binary Options:
+       --debug, -d                   Print debug messages to standard error
+
+     dir1, dir2, ...                 Input Directories
+
+If a binary option is issued, then it means "set". The long form of this
+options can be negated by prepending "no" or "no-", then the option
+means "unset".
+
+WARNING
+
+scanaudio is a Alpha - so expect the worst! Of course it should not
+destroy your hard drive or delete other files. But be cautionuous - if you use
+this script it can happen to you, even if it never occured at my system.
+scanaudio is written in perl and placed under the GNU General Public License v3.
+EOF
+
+
+
+# *** "body" of the program ***
+main();
+
+
+# *** main routine ***
+sub main() {
+
+  # *** read the command line
+  read_commandline();
+
+  # *** do some simple sanity checks
+  check_options();
+
+  # *** find all files
+  find ({ wanted => \&process_files, # process function
+	  follow_fast => 1},         # follow symlinks
+	  , @ARGV);                  # do the processing
+
+  exit;
+}
+
+
+
+# *** is called by find to process all the selected files ***
+sub process_files () {
+
+  # local variables
+  my $curfile = $_;                 # is the current filename within that directory
+  my $curdir = $File::Find::dir;    # is the current directory name,
+  my $full = $File::Find::name;     # is the complete pathname to the file.
+  my %tags;                         # "${tag}=content" for every tag
+  my $suffix;                       # file suffix (to select right tag prog)
+  my $tagname;                      # Name of the tag under processing; for replacement
+  my $tcon;                         # Tag content under processing; for replacement
+
+
+  # check: if already processed, then exit
+  return if ($curdir eq $processdir);
+
+  # check: is this a file?
+  if ( -d $curfile) {
+    print STDERR "DEBUG: skipping directory \"$full\"\n" if $options{'debug'};
+    return;
+  }
+
+  # DEBUG
+  #print "curdir: $curdir\ncurfile: $curfile\nfull: $full\n\n";
+  #$processdir = $curdir;
+  #return;
+
+  if ($curfile =~ /$options{'suffix_files'}/) {    # we have a input file
+
+    print STDERR "DEBUG: music file: $curfile\n   dir: $curdir\n"
+      if $options{'debug'};
+    # *** Get Tags ***
+    undef %tags;
+    # get the suffix
+    $curfile =~ /\.([[:alnum:]]+)$/;
+    $suffix = $1;
+    print STDERR "DEBUG: isolated suffix is: $suffix\n"
+      if $options{'debug'};
+    # pipe in comments by forking (to avoid shell)
+    print STDERR "CHECKING file $curfile\n"
+      if $options{'debug'};
+    unless (open FH, "-|") {
+      # child
+      exec ${$options{'gettags_prog'}}{$suffix},     # prog name
+	   @{${$options{'gettags_opts'}}{$suffix}},  # options
+           $curfile;                                 # File name
+      # never get here
+    }
+    # parent
+    while (<FH>) {
+      # store in hash
+      chomp;   #remove endl
+      next unless $_;                 # ignore empty lines
+      if (! ($_ =~ /$options{'tag_separation'}/)) {
+	# no match
+	print STDERR "  ERR: No Tag identified in line \"$_\"!\n";
+	next;
+    }
+      $tagname = $1;
+      $tcon    = $3;
+      # Tag replacement as needed for id3v2 (mp3)
+      if ($tagname eq "TCON") {
+         $tagname = "genre";
+         # And remove the "(number)" at the end of the string
+         $tcon =~ /^(.+)\(\d+\)$/ or die "Genre tweaking failed for \"$tcon\"!";
+         $tcon = $1;
+      }
+      $tagname = "album"  if $tagname eq "TALB";
+      $tagname = "artist" if $tagname eq "TPE1";
+      $tags{lc($tagname)} = $tcon;		# Tag content
+      print STDERR "   DEBUG: tag read: $tagname = $tcon\n"
+	if $options{'debug'};
+    }
+    close FH;
+
+    # *** Print Tags ***
+    foreach (@tags_to_print) {
+      # define all tags to avoid errors
+      $tags{$_}="UNKNOWN" unless defined $tags{$_};
+      # print
+      print "\"$tags{$_}\",";
+    }
+    # print path
+    print "$curdir\n";
+  } else {
+    print STDERR "IGNORE $curdir, because $curfile is unknown type\n"
+      if $options{'debug'};
+  }
+
+  $processdir = $curdir;     # save current directory (mark it processed)
+}
+
+# *** do some simple sanity checks ***
+sub check_options () {
+
+  # check if there were directories issued
+  if (scalar(@ARGV) == 0) {
+    print STDERR "scanaudio: No directories to process! Help with \"--help\" available\n";
+    exit $exit_codes_meaning{'commandline'};
+  }
+
+}
+
+
+
+# *** reads the command line options ***
+sub read_commandline() {
+
+  # *** local variables
+  my $help;       # set to one if help screen is requested
+  my $ver;        # set to one if version is requested
+  my %argv;       # command line options
+
+  Getopt::Long::Configure ("bundling");   # enable bundling level 1
+  my $result = GetOptions(\%options,
+			  'help|h|?' => \$help,
+			  'version|V' => \$ver,
+			  'debug|d'
+			 );
+
+  if (! $result) {
+    print STDERR "\nFailed to parse the command line options: Exiting\n";
+    exit $exit_codes_meaning{'commandline'};
+  }
+
+  if ( $ver) {
+    print versionstring()  . "\n";
+    exit 0;
+  }
+
+  if ( $help) {
+    print versionstring()  . "\n\n";
+    print $Help_Documentation;
+    exit 0;
+  }
+
+  # input dirs are now left in @ARGV
+}
+
+
+
+# *** return version string from svn revision ***
+sub versionstring () {
+
+    my $rev = 'DEVEL'; # '$LastChangedRevision: 195 $';
+    my $date = '<See Git>';  # '$LastChangedDate: 2006-04-16 20:36:41 +0200 (Sun, 16 Apr 2006) $';
+    my $progname = "scanaudio";
+
+    # Filter revision
+    $rev = $1 if $rev =~ /LastChangedRevision: (\d+)/;
+
+    # Filter date
+    $date = $1 if $date =~ /LastChangedDate: ([\d-]+)/;
+
+    "$progname revision $rev from $date \n"
+      . 'Copyright (C) 2004-2006,2018 Robert Lange <sd2k9@sethdepot.org>' . "\n"
+      . "Licensed under the GNU General Public License v3\n"
+}
+
