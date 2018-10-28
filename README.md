@@ -140,7 +140,7 @@ Requires: git
 
 start_minimized
 ----------------
-Starts a program minimized
+Starts a program minimized  
 Original Source: https://askubuntu.com/questions/663187/how-can-i-run-a-program-on-startup-minimized
 
 Language: Python 3
