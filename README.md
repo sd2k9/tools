@@ -138,6 +138,15 @@ Language: Bash
 Requires: git
 
 
+g-subrm
+-------
+Git Helper; Removes a submodule
+
+Language: Bash
+
+Requires: git
+
+
 start_minimized
 ----------------
 Starts a program minimized  
