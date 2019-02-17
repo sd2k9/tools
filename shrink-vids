@@ -276,7 +276,7 @@ case ${MODEL} in
   AUDIO_BITRATE=56k
   # Cropping and Noise Filtering - Deinterlacing disabled
   # mencoder MENCODER_MOREOPTS="${MENCODER_MOREOPTS} -vf crop=696:552:12:8,denoise3d -noslices"
-  MENCODER_MOREOPTS="${MENCODER_MOREOPTS} --vf crop=696:552:12:8,hqdn3d"
+  MENCODER_MOREOPTS="${MENCODER_MOREOPTS} --vf crop=696:552:12:8,lavfi=hqdn3d"
   if [ -n "${MENCODER_MOREOPTS_DESC}" ]; then  # Add space and komma
       MENCODER_MOREOPTS_DESC="${MENCODER_MOREOPTS_DESC}, "
   fi
