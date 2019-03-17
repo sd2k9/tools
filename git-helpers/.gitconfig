@@ -1,0 +1,88 @@
+# -*- mode: conf; coding: utf-8 -*-
+[include]
+    # Local settings: [user]
+    path = ~/.gitconfig.local
+
+[color]
+        # Color output
+        ui = true
+
+[core]
+        # Default Editor
+        editor = mcedit
+	# pager =    	  # No pager at all
+	# pager = less -r # Force less with color output, seem so be default now
+	# Default pager: Less when more than one page, with color output enabled
+        # Files to exclude
+        excludesfile = ~/.gitignore
+
+[rebase]
+	# Interactive rebase can automatically consider squash/fixup commits
+     	# Enable with: git config rebase.autosquash true
+     	# Create the commit with git commit --fixup/--squash <commit_to_fix_or_squash>
+	autosquash = true
+
+[push]
+	default = simple
+
+[diff]
+	# Detect copies and renames, also with logfiles et al
+	renames=copy
+	# See submodule updates when doing git diff
+	submodule = log
+	# Default difftool is meld
+	tool = meld
+
+[status]
+	# When Submodules are available, print also their status
+	submodulesummary = true
+
+[credential]
+	helper = cache --timeout 600
+	helper = netrc -f ~/.authinfo.gpg
+
+[log]
+	# Always decorate log outputs
+	decorate = true
+
+[alias]
+	# Shortcuts
+	co = checkout
+	ci = commit
+	eci = -c core.editor=emacs commit
+	stat = status
+	# Status without submodule summary (sometimes too much output)
+	plainstat = -c status.submodulesummary=false status
+	ls = ls-files
+	wdiff = diff --word-diff
+        # Improved Log
+	# loggraph = log --pretty=format:'%h %s' --graph
+	loggraph = log --all --graph --pretty=format:'%C(auto)%h%C(auto)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit --date=relative
+	# List all branches including unnamned ones as graph
+	loggraph-anon = !git loggraph  $(git rev-list -g --all)
+	logfiles = log --name-status
+	vlogfiles = log --stat
+	logmaster = log origin/master..
+	# Oneline-log with show branches & tags
+	logoneline = log --oneline --decorate
+	# Pulling and merging only fast-forward
+	pullff = pull --ff-only
+	mergeff = merge --ff-only
+	# Merge a branch (external script)
+	mergebranch = !${HOME}/bin/public/git-helpers/g-mergebranch
+	# Clean (Remove) branch names after a Gitlab merge, Argument is branch name
+	mergeclean = !"[ -n \"$1\" ] && git branch -v --delete $1 && git remote -v prune origin"
+        # Submodules: Get the current log entry of all submodules
+	sublog = submodule foreach 'git log -n 1'
+        # Submodules: Always do init and recursive with ubdate
+	subco = submodule update --init --recursive
+        # Submodules: Status shortcut
+	substat = submodule status
+	# Remove a submodule (external script)
+	subrm = !${HOME}/bin/public/git-helpers/g-subrm
+	# Git Gui with all displays enabled
+	gui = !gitk --all --branches --remotes --tags &
+	# Lightweight/Annotated Tag lister
+	taglist = !"git for-each-ref refs/tags/ --format '%(objecttype) %(refname:short)' | while read ty name; do \
+	           [ $ty = tag ] && echo -n 'Annotated: '; \
+                   [ $ty = commit ] && echo -n 'Lightweight: '; echo $name; done"

@@ -1,0 +1,5 @@
+# Local git configuration, included by .gitconfig
+
+[user]
+	name = USERNAME
+	email = USER-EMAIL

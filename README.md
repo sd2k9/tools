@@ -5,6 +5,11 @@ Tools I use to ease my work, not big enough to bless them with an
 dedicate project, but maybe enough to be of interest to others too.
 
 
+Git Helpers
+-----------
+See [Git Helpers Subpage](git-helpers/)
+
+
 alice-box-control
 -----------------
 Controls an Alice DSL Router Box
@@ -119,32 +124,6 @@ Language: Bash
 
 Requires: Imagemagick
 
-
-Gitmode.bash
-------------
-Git Helper; Prepares a "Git-Bash" with git-prompt and git-bash-completions
-
-Language: Bash
-
-Requires: git (obviously)
-
-
-g-mergebranch
--------------
-Git Helper; Merges a branch and performs branch cleanup afterwards
-
-Language: Bash
-
-Requires: git
-
-
-g-subrm
--------
-Git Helper; Removes a submodule
-
-Language: Bash
-
-Requires: git
 
 
 start_minimized

@@ -1,0 +1,6 @@
+# Global git ignores
+# ==================
+
+# Ignore backup files
+*~
+*.bak
