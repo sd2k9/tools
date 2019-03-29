@@ -26,7 +26,8 @@ Steps
 - Delete remote brach name
 
 Usage: $(basename $0) [targetbranch] branchname
-* targetbranch: The destination branch for the merge (usually master)
+* targetbranch: The destination branch for the merge
+                Use current branch when not given
 * branchname: The branch to merge and cleanup
 
 EOF
