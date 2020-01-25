@@ -1,0 +1,144 @@
+#!/usr/bin/env python3
+# -*- mode: python; coding: utf-8 -*-
+# Monitor a user syscall auditd trail generated from the following rules:
+#
+# -a always,exit -F arch=b32 -S execve -F euid=USERNAME -F key=KEYWORD
+# -a always,exit -F arch=b64 -S execve -F euid=USERNAME -F key=KEYWORD
+#
+# Arguments: -f to follow the file
+
+
+# *** Import modules
+# Exit Function
+import sys
+# RegExp
+import re
+# Sleep
+import time
+# SEEK_END constant
+import os
+# Catch SIGINT
+import signal
+
+
+# ********************************************************************************
+# *** Global settings as dictionary
+opt = {'logfile': '/var/log/audit/audit.log',  # Logfile name
+       'keyword': 'KEYWORD',         # KEYWORD to look for, everything else is ignored
+       'follow': False           # Follow file, set by command line
+      }
+# File to read from
+fin = None
+
+
+# ********************************************************************************
+# *** Functions
+def signal_handler(signal, frame):
+    # SIGINT (Ctrl+C etc.) Handler
+    if fin:  # Close file when open
+        fin.close()
+    print("Abort")
+    sys.exit(0)
+
+# ********************************************************************************
+# *** Main Program
+def main():
+
+    # *** Check for follow argument
+    if len(sys.argv) > 2:
+        print("Wrong number of arguments! Call with -f to follow file or no arguments at all")
+        sys.exit(1)
+    if len(sys.argv) == 2:
+        if sys.argv[1] != '-f':
+            print("Wrong argument! Call with -f to follow file or no arguments at all")
+            sys.exit(1)
+        else:
+            opt['follow'] = True
+
+
+    # *** Register signal handler
+    signal.signal(signal.SIGINT, signal_handler)
+
+    # *** Print settings
+    print("Log file: " + opt['logfile'])
+    if opt['follow'] is True:
+        print("   Follow log file")
+    print("Keyword: "  + opt['keyword'])
+
+    # *** Variables
+    state = 0          # Parsing which line
+
+    # *** Compiled regexp
+    # 1st line: SYSALL
+    # Template: type=SYSCALL msg=audit(1579534048.263:798): arch=c000003e syscall=59 success=yes exit=0 a0=558735e9cb90 \
+    #           a1=558735dd9630 a2=558735de59a0 a3=8 items=2 ppid=19776 pid=20151 auid=4294967295 uid=1001 gid=1001 euid=1001 \
+    #           suid=1001 fsuid=1001 egid=1001 sgid=1001 fsgid=1001 tty=pts11 ses=4294967295 comm="ls" exe="/bin/ls" key="KEYWORD"
+    re_syscall = re.compile("^type=SYSCALL msg=audit\(.*\):.+ comm=\"(.+)\" exe=\"(.+)\" key=\"{0}\"$".format(opt['keyword']))
+
+    # 2nd line: arguments
+    # Template: type=EXECVE msg=audit(1579534048.263:798): argc=4 a0="ls" a1="--color=auto" a2="-l" a3="-a"
+    re_args = re.compile('^type=EXECVE msg=audit\(.*\): argc=(\d+) (.*)$')
+    # Simple argument assembly
+    re_args_assemble = re.compile('a(\d+)=\"([^\"]+)\"')
+
+    # 3rd line: directory
+    # Template: type=CWD msg=audit(1579534048.263:798): cwd="/home/USERHOME"
+    re_dir = re.compile("^type=CWD msg=audit\(.*\): cwd=\"(.+)\"$")
+
+    # *** Open Input file
+    fin = open(opt['logfile'], 'r')
+    if opt['follow']:
+        # Go to end of file
+        fin.seek(0, os.SEEK_END)
+
+    # *** Scan audit file for content
+    while True:
+        # Read line, do it "blocking" in follow mode
+        if opt['follow']:
+            fwhere = fin.tell()
+            line = fin.readline()
+            while not line:
+                time.sleep(1)
+                fin.seek(fwhere)
+                line = fin.readline()
+        else:   # ! opt['follow']:
+            line = fin.readline()
+            if not line:    # File is exhausted
+                break
+        if state == 0:    # First line
+            match = re_syscall.search(line)
+            if match:    # Found start of syscall output
+                # print (match.group(1) + " (" + match.group(2) + ")" )
+                print (match.group(2), end=" " )
+                state = 1
+        elif state == 1: # argument match
+            match = re_args.search(line)
+            if match:
+                for match in re_args_assemble.finditer(line):
+                    # print (match.group(0))
+                    # Skip first match
+                    if int(match.group(1)) != 0:
+                        print(match.group(2), end=" " )
+                state = 2
+        elif state == 2: # directory match
+            # print(line)
+            match = re_dir.search(line)
+            if match:
+                print ("(pwd " + match.group(1) + ")")
+                state = 0   # Ready for next entry
+        else:
+            print("Internal error (1)")
+            sys.exit(1)
+
+    # Feddisch, Close again
+    fin.close()
+    return(0)
+
+
+
+# *** Call Main program
+__version__ = ''.join(filter(str.isdigit, "$LastChangedRevision$"))
+if __version__ == "":
+   __version__ = "(development version)"
+if __name__ == "__main__":
+    sys.exit(main())

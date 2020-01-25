@@ -125,7 +125,6 @@ Language: Bash
 Requires: Imagemagick
 
 
-
 start_minimized
 ----------------
 Starts a program minimized  
@@ -158,3 +157,17 @@ dirmngr-program PREFIX/dirmngr-wrapper
 Language: Bash
 
 Requires: dirmngr > 2
+
+
+monitor_user
+------------
+Auditd user monitor  
+Parses the auditd logfile and prints commands invoked by the user USERNAME
+
+
+Language: Python 3
+
+Requires: auditd  
+Auditd rules
+- -a always,exit -F arch=b32 -S execve -F euid=USERNAME -F key=KEYWORD
+- -a always,exit -F arch=b64 -S execve -F euid=USERNAME -F key=KEYWORD
