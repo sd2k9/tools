@@ -32,6 +32,8 @@
 	submodule = log
 	# Default difftool is meld
 	tool = meld
+	# In Word diff, also split on "/" (e.g. inside paths) and ":" (separator)
+	wordRegex=[^[:space:]/:]+
 
 [status]
 	# When Submodules are available, print also their status
@@ -55,6 +57,7 @@
 	plainstat = -c status.submodulesummary=false status
 	ls = ls-files
 	wdiff = diff --word-diff
+	sdiff = diff --word-diff --staged
         # Improved Log
 	# loggraph = log --pretty=format:'%h %s' --graph
 	loggraph = log --all --graph --pretty=format:'%C(auto)%h%C(auto)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit --date=relative
