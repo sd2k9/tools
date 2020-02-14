@@ -1,7 +1,7 @@
 # -*- mode: conf; coding: utf-8 -*-
 [include]
     # Local settings: [user]
-    path = ~/.gitconfig.local
+    path = config.local
 
 [color]
         # Color output
@@ -13,8 +13,8 @@
 	# pager =    	  # No pager at all
 	# pager = less -r # Force less with color output, seem so be default now
 	# Default pager: Less when more than one page, with color output enabled
-        # Files to exclude
-        excludesfile = ~/.gitignore
+        # excludesfile: Files to exclude, defaults to $HOME/.config/git/ignore
+	# attributesFile: User git attributes file, defaults to $HOME/.config/git/attributes
 
 [rebase]
 	# Interactive rebase can automatically consider squash/fixup commits
@@ -32,8 +32,17 @@
 	submodule = log
 	# Default difftool is meld
 	tool = meld
-	# In Word diff, also split on "/" (e.g. inside paths) and ":" (separator)
-	wordRegex=[^[:space:]/:]+
+	# In Word diff, also split on "/" (e.g. inside paths) and ":" and "," (separator)
+	wordRegex=[^[:space:]/:,]+
+
+[difftool "lo"]
+	# Custom difftool libreoffice
+	# Invoke with git difftool --tool lo
+	cmd = ${HOME}/bin/public/git-helpers/g-diff-libreoffice \"$LOCAL\" \"$REMOTE\"
+
+[diff "excel"]
+      # Diff excel documents in text (CSV) representation
+      textconv = ${HOME}/bin/public/git-helpers/g-diff-excel
 
 [status]
 	# When Submodules are available, print also their status

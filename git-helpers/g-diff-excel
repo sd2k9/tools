@@ -1,0 +1,96 @@
+#!/bin/bash
+# Function: Text representation of Excel sheets for text diff
+#           See .gitconfig at [diff "excel"]
+
+# ------------------------------------------------------------------------------
+
+# *** Settings ***
+# Treat uninitialised variable as error and exit script
+set -u
+# Test mode: True when defined (only echo commands)
+TESTMODE=
+
+# ------------------------------------------------------------------------------
+
+# *** Functions ***
+function help_text() {
+cat<<EOF
+
+Outputs a textual representation of Excel sheets on stdout
+Used for text diff, see README.md for details
+
+Requires: xlsx2csv
+
+Usage: $(basename $0) filename
+* filename: Filename of Excel XLSX document
+
+EOF
+}
+
+# Abort on tool error (errorcode <> 0)
+function abort_on_error() {
+    local err
+    err=$1
+    shift
+    if [ $err -ne 0 ]; then
+	   echo "Program execution failed with error code $err!"
+	   exit 1
+    fi
+}
+
+
+# Execute this tool
+# Caution: Use \"text with spaces\" to escape spaces
+function exec_tool() {
+   if [[ -z "$TESTMODE" ]]; then
+       eval "$@"
+       abort_on_error $?
+   fi
+}
+
+# ------------------------------------------------------------------------------
+
+# *** Rudimentary command line parsing
+
+if [[ $# -ne 1 || "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+    help_text
+    exit
+fi
+
+# Arguments
+FILE="$1"
+
+# Test for file existance
+if [[ ! -f "$FILE" ]]; then
+    echo "ERROR: File $FILE does not exists!"
+    exit 1
+fi
+
+# ------------------------------------------------------------------------------
+
+# *** Now execute actions
+
+# echo "Debug: Convert file $FILE"
+
+# Create temp directory
+TMPDIR=$(mktemp -d -t git-diff-excel-XXXXXXXXXX)
+abort_on_error $?
+
+
+# Convert file
+exec_tool xlsx2csv --ignoreempty --skipemptycolumns --sheet 0 "$FILE" "$TMPDIR"
+
+# Output files
+# find "$TMPDIR" -maxdepth 1 -print0 | sort -z | xargs -0 cat
+for fil in $(ls -1 $TMPDIR); do
+    echo
+    echo "*** Sheet $fil ***"
+    echo "==============================="
+    cat "$TMPDIR/$fil"
+done
+
+# Remove temp directory again
+exec_tool rm -r "$TMPDIR"
+
+# *** Done
+exit

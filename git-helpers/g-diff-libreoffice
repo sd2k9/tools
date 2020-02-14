@@ -1,0 +1,57 @@
+#!/bin/bash
+# Function: difftool entry for libreoffice
+#           See .gitconfig at [difftool "lo"]
+
+# ------------------------------------------------------------------------------
+
+# *** Settings ***
+# Treat uninitialised variable as error and exit script
+set -u
+# Test mode: True when defined (only echo commands)
+TESTMODE=
+
+# ------------------------------------------------------------------------------
+
+# *** Functions ***
+function help_text() {
+cat<<EOF
+
+Difftool entry for libreoffice, opens the new document
+and prints instructions how to compare documents in libreoffice.
+See README.md for details
+
+Requires: libreoffice
+
+Usage: $(basename $0) old_file new_file
+* old_file: Pre-diff filename of a Libreoffice document
+* new_file: Post-diff filename of a Libreoffice document
+
+EOF
+}
+
+# ------------------------------------------------------------------------------
+
+# *** Rudimentary command line parsing
+
+if [[ $# -ne 2 || "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+    help_text
+    exit
+fi
+
+# Arguments
+LOCAL="$1"
+REMOTE="$2"
+
+# ------------------------------------------------------------------------------
+
+# *** Now execute actions
+echo "Invoking libreoffice with post-diff file, select \"Edit/Compare Document\" with file"
+echo "   $LOCAL"
+echo
+
+libreoffice "$REMOTE"
+
+# *** Done
+echo
+echo "Done"
+exit

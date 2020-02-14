@@ -1,0 +1,5 @@
+# -*- mode: conf; coding: utf-8 -*-
+# *** Git Attributes
+
+# Text diff for Excel documents
+*.xlsx   diff=excel
