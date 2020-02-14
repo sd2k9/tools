@@ -60,7 +60,7 @@ Requires: xlsx2csv
 
 g-diff-libreoffice
 -------------------
-Difftool entry for libreoffice, see below
+Difftool entry for LibreOffice, see below
 
 Language: Bash
 
@@ -75,9 +75,9 @@ helpful for presenting information and doing calculcation in an easy way.
 
 To allow some way of seeing changes in these kind of documents two methods are available.
 
-### Libre office as custom diff-tool
-- Opens the new document and prints instructions how to compare documents in Libreoffice
-- Suitable for all formats understood by Libreoffice
+### LibreOffice as custom diff-tool
+- Opens the new document and prints instructions how to compare documents in LibreOffice
+- Suitable for all formats understood by LibreOffice
 - Invoke with  
   git difftool --tool lo
 - Setup
