@@ -10,7 +10,7 @@ Put (or link) these files into your configuration directory at
 ~/.config/git
 
 
-### .gitconfig
+### config
 Git configuration file,
 you want to check and maybe make some local adaptions.
 

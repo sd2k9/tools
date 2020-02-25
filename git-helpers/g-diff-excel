@@ -1,6 +1,6 @@
 #!/bin/bash
 # Function: Text representation of Excel sheets for text diff
-#           See .gitconfig at [diff "excel"]
+#           See config/config at [diff "excel"]
 
 # ------------------------------------------------------------------------------
 

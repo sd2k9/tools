@@ -1,6 +1,6 @@
 #!/bin/bash
 # Function: difftool entry for libreoffice
-#           See .gitconfig at [difftool "lo"]
+#           See config/config at [difftool "lo"]
 
 # ------------------------------------------------------------------------------
 
