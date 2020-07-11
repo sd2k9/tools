@@ -56,6 +56,8 @@
 [log]
 	# Always decorate log outputs
 	decorate = true
+	#  Continue listing the history of a file beyond renames, works only for a single file
+       follow = true
 
 [alias]
 	# Shortcuts

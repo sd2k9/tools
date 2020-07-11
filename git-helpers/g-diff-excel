@@ -40,9 +40,10 @@ function abort_on_error() {
 
 
 # Execute this tool
-# Caution: Use \"text with spaces\" to escape spaces
+# Caution: Use "\"text with spaces\"" to escape spaces
 function exec_tool() {
    if [[ -z "$TESTMODE" ]]; then
+       echo "$@"
        eval "$@"
        abort_on_error $?
    fi
