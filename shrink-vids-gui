@@ -1,0 +1,52 @@
+#/bin/bash
+# Schneiden/Komprimieren mit
+#  (nnice) shrink-vids vhs vhs_video_big.avi vhs_video_shrinked.avi
+#   Im Batch
+#      fil=1992_incoming/...; ; filnodir=${fil##*/}; \
+#      nnice shrink-vids vhs --start 5 --end 00:15:17 \
+#      $fil vhs/1992/${filnodir%%.*}.mp4; \
+# 	 XM ${fil##*/} DONE
+#
+# Als Zenity-Dialog OLD
+#      inputdir="1992"; \
+#      fil=$(zenity --file-selection --title "Select file" --filename ${inputdir}_incoming/$(ls -1 ${inputdir}_incoming/ |head -1) ); \
+#      csv=$(zenity --title "VHS Compress" --text "File to convert with times" --forms  --add-entry "Start Time" --add-entry "End Time"); \
+#      filnodir=${fil##*/}; \
+#      start=${csv%%|*}; end=${csv##*|}; \
+#      if [ -n "$start" ]; then start="--start ${start}"; fi; \
+#      if [ -n "$end" ]; then end="--end ${end}"; fi; \
+#      echo nnice shrink-vids vhs ${start} ${end} \
+#      $fil vhs/${inputdir}/${filnodir%%.*}.mp4; \
+#      nnice shrink-vids vhs ${start} ${end} \
+#      $fil vhs/${inputdir}/${filnodir%%.*}.mp4; \
+# 	 XM ${fil##*/} DONE
+
+NNICE_CMD="nice ionice -c2 -n7"
+XM_CMD="xmessage -nearmouse"
+
+# Als Zenity-Dialog Using current (recommended: /tmp/)
+# as input/encoding directory
+# outputdir="/home/tmp/video_conv/vhs/1992_1993/new"
+outputdir="/home/tmp/video_conv/1992_1993_incoming/"
+fil=$(zenity --file-selection --title "Select file" --filename $(ls -1 *.avi | head -1) )
+if [[ $? != 0 ]]; then
+    echo "Aborted"
+    exit 0
+fi
+mpv --profile=pcspeaker "$fil" &
+csv=$(zenity --title "VHS Compress" --text "File to convert with times (seconds or hh:mm:ss)" --forms  --add-entry "Start Time" --add-entry "End Time")
+if [[ $? != 0 ]]; then
+    echo "Aborted"
+    exit 0
+fi
+filnodir=${fil##*/}
+start=${csv%%|*}; end=${csv##*|}
+if [ -n "$start" ]; then start="--start ${start}"; fi
+if [ -n "$end" ]; then end="--end ${end}"; fi
+
+echo ${NNICE_CMD} shrink-vids vhs ${start} ${end} $fil ${filnodir%%.*}.mp4
+${NNICE_CMD} shrink-vids vhs ${start} ${end} $fil ${filnodir%%.*}.mp4
+
+# mv -v ${filnodir%%.*}.mp4 ${outputdir}
+echo "Done - Move file yourself after check"
+${XM_CMD} ${fil##*/} DONE

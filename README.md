@@ -102,6 +102,13 @@ Language: Bash
 
 Requires: mplayer, mencoder
 
+shrink-vids-gui
+---------------
+Zenity-GUI for shrink-vids
+
+Language: Bash
+
+Requires: shrink-vids, zenity
 
 scanaudio
 ---------
