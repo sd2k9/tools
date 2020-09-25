@@ -13,6 +13,9 @@ TESTMODE=
 # ------------------------------------------------------------------------------
 
 # *** Functions ***
+# Include common functions
+source ${BASH_SOURCE[0]%/*}/bash-functions
+
 function help_text() {
 cat<<EOF
 
@@ -27,27 +30,6 @@ Usage: $(basename $0) filename
 EOF
 }
 
-# Abort on tool error (errorcode <> 0)
-function abort_on_error() {
-    local err
-    err=$1
-    shift
-    if [ $err -ne 0 ]; then
-	   echo "Program execution failed with error code $err!"
-	   exit 1
-    fi
-}
-
-
-# Execute this tool
-# Caution: Use "\"text with spaces\"" to escape spaces
-function exec_tool() {
-   if [[ -z "$TESTMODE" ]]; then
-       echo "$@"
-       eval "$@"
-       abort_on_error $?
-   fi
-}
 
 # ------------------------------------------------------------------------------
 

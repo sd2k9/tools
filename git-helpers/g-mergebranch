@@ -13,6 +13,9 @@ TESTMODE=
 # ------------------------------------------------------------------------------
 
 # *** Functions ***
+# Include common functions
+source ${BASH_SOURCE[0]%/*}/bash-functions
+
 function help_text() {
 cat<<EOF
 Merges a branch a performs cleanup afterwards.
@@ -31,35 +34,6 @@ Usage: $(basename $0) [targetbranch] branchname
 * branchname: The branch to merge and cleanup
 
 EOF
-}
-
-# Abort on tool error (errorcode <> 0)
-function abort_on_error() {
-    local err
-    err=$1
-    shift
-    if [ $err -ne 0 ]; then
-	   echo "Program execution failed with error code $err!"
-	   exit 1
-    fi
-}
-
-# Execute this tool after confirmation
-# Caution: Use \"text with spaces\" to escape spaces
-function exec_tool_confirm() {
-   local go_on
-   echo -n "Execute (y/N): $@ "
-   read -n 1 go_on
-   echo
-   if [[ $go_on != "y" && $go_on != "Y" ]]; then
-       echo "Abort as requested"
-       exit
-   fi
-
-   if [[ -z "$TESTMODE" ]]; then
-       eval "$@"
-       abort_on_error $?
-   fi
 }
 
 # ------------------------------------------------------------------------------
