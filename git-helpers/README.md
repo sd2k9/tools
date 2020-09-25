@@ -49,6 +49,13 @@ Git Helper; Removes a submodule
 Language: Bash
 
 
+g-prune
+-------
+Git Helper; Prunes remote and local branches
+
+Language: Bash
+
+
 g-diff-excel
 ------------
 Text representation of Excel sheets for text diff, see below

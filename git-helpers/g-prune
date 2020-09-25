@@ -1,0 +1,76 @@
+#!/bin/bash
+# Function: Prune remote and local branches
+#           Local pruning is queried for continue
+
+# ------------------------------------------------------------------------------
+
+# *** Settings ***
+# Treat uninitialised variable as error and exit script
+set -u
+# Test mode: True when defined (only echo commands)
+TESTMODE=
+
+
+# ------------------------------------------------------------------------------
+
+# *** Functions ***
+# Include common functions
+source ${BASH_SOURCE[0]%/*}/bash-functions
+
+function help_text() {
+cat<<EOF
+Prunes remote and local branches
+
+Steps
+- git remote -v prune origin
+- Offer deletion of local counterparts of pruned branches
+
+Usage: $(basename $0)
+* Start in repository root directory
+
+EOF
+}
+
+# ------------------------------------------------------------------------------
+
+# *** Rudimentary command line parsing
+if [[ $# -ne 0 || "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+    help_text
+    exit
+fi
+
+# ------------------------------------------------------------------------------
+
+# *** Now execute actions
+
+if [[ -n "$TESTMODE" ]]; then
+    PRUNE_CMD="git remote -v prune --dry-run origin"
+else
+    PRUNE_CMD="git remote -v prune origin"
+fi
+
+declare -a BRANCHES
+
+echo "Prune remote branches"
+while IFS='\n' read -r n; do
+    # Print line
+    echo "$n"
+    # Find "prune" - Entries
+    if [[ "$n" =~ \[(would )?pruned?\] ]]; then
+	# Add branches to array
+	# echo "PRUNE: ${n#*/}"
+	BRANCHES+=(${n#*/})
+    fi
+done < <($PRUNE_CMD)
+# For debug
+# done < <(echo -e 'Pruning origin\n'\
+# 'URL: git@scm-01.karlstorz.com:ims/product/vitom_4k3d_head.git\n'\
+# '  * [would prune] origin/223-exposure-with-shr-argument-as-feature-flag')
+
+# Prune branches
+echo
+echo "Delete local branches"
+for bran in "${BRANCHES[@]}"
+do
+    exec_tool_confirm git branch --delete "$bran"
+done

@@ -90,7 +90,7 @@
 	# Clean (Remove) branch names after a Gitlab merge, Argument is branch name
 	mergeclean = !"[ -n \"$1\" ] && git branch -v --delete $1 && git remote -v prune origin"
 	# Delete all stale references from origin
-	remoteprune = remote -v prune origin
+	remoteprune = !${HOME}/bin/public/git-helpers/g-prune
         # Submodules: Get the current log entry of all submodules
 	sublog = submodule foreach 'git log -n 1'
         # Submodules: Always do init and recursive with ubdate
