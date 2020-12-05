@@ -32,9 +32,9 @@
 	submodule = log
 	# Default difftool is meld
 	tool = meld
-	# In Word diff, also split on "/" (e.g. inside paths) and ":" and "," and ";" (separator)
+	# In Word diff, also split on ":" and "," and ";" (separator)
 	#               and "=", "(", ")"
-	wordRegex= "[^[:space:]/:,;=()]+"
+	wordRegex= "[^[:space:]:,;=()]+"
 
 [difftool "lo"]
 	# Custom difftool libreoffice
