@@ -61,7 +61,8 @@
 
 [alias]
 	# Shortcuts
-	co = checkout
+	sw = switch
+	so = switch
 	ci = commit
 	eci = -c core.editor=emacs commit
 	stat = status
