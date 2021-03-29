@@ -40,7 +40,8 @@ map2navi
 --------
 Put a route to a GPS Handheld
 
-The route is simplified to contain less points on the way
+The route is simplified to contain less track points,
+and for GPX files waypoints are removed.
 
 Input can be a Google Maps URL or a GPX file
 

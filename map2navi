@@ -84,7 +84,8 @@ get_options() {
           # help text
           echo "$PROGNAME - Put a route to GPS Handheld"
           echo
-          echo "The route is simplified to contain less points on the way"
+          echo "The route is simplified to contain less points on the way,"
+          echo "and for GPX files waypoints are removed."
 	  echo "Performed steps: Fetch route, convert to gpx, store on device"
 	  echo "Used programs: gpsbabel, wget"
 	  echo "Input can be a Google Maps URL or a GPX file,"
@@ -113,7 +114,7 @@ get_options() {
           STDOUT_MODE=1
           ;;
           *)
-          # Store into 
+          # Store into
      	  case $argcounter in
       	    1)
       		ROUTENAME=$opt
@@ -177,11 +178,11 @@ if [ ${URL_GPX##*.} != "gpx" ]; then
       exit 1
    fi
 
-# *** For GPX: Simplify GPX
+# *** For GPX: Simplify GPX and remove waypoints (may interfere with route renaming later)
 else
    [ -z "$STDOUT_MODE" ] && \
-     echo $GPSBABEL -i gpx -f $URL_GPX -x simplify,$SIMPLIFY -o gpx -F -
-  GPXFILE="$($GPSBABEL -i gpx -f $URL_GPX -x simplify,$SIMPLIFY -o gpx -F -)"
+     echo $GPSBABEL -i gpx -f $URL_GPX -x simplify,$SIMPLIFY -x nuketypes,waypoints -o gpx -F -
+  GPXFILE="$($GPSBABEL -i gpx -f $URL_GPX -x simplify,$SIMPLIFY -x nuketypes,waypoints -o gpx -F -)"
   if [ $? -ne 0 ]; then
      echo "Failure invoking $GPSBABEL - Aborting"
      exit 1
