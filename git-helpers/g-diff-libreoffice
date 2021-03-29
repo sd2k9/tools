@@ -14,7 +14,7 @@ TESTMODE=
 
 # *** Functions ***
 # Include common functions - not needed here
-# source ${BASH_SOURCE[0]%/*}/bash-functions
+# source ${BASH_SOURCE[0]%/*}/../bash-functions
 function help_text() {
 cat<<EOF
 

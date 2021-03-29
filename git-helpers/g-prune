@@ -16,7 +16,7 @@ EXEC_DO_NO_ABORT_ON_ERROR=true
 
 # *** Functions ***
 # Include common functions
-source ${BASH_SOURCE[0]%/*}/bash-functions
+source ${BASH_SOURCE[0]%/*}/../bash-functions
 
 function help_text() {
 cat<<EOF

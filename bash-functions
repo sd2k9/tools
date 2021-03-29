@@ -19,8 +19,8 @@ function abort_on_error() {
 # Execute this tool
 # Caution: Use "\"text with spaces\"" to escape spaces
 function exec_tool() {
-   if [[ -z "$TESTMODE" ]]; then
-       echo "$@"
+   echo "$@"
+   if [[ -z "${TESTMODE:-}" ]]; then
        eval "$@"
        abort_on_error $?
    fi
@@ -38,7 +38,7 @@ function exec_tool_confirm() {
        exit
    fi
 
-   if [[ -z "$TESTMODE" ]]; then
+   if [[ -z "${TESTMODE:-}" ]]; then
        eval "$@"
        abort_on_error $?
    fi
