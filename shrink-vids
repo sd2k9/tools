@@ -341,6 +341,13 @@ fi
 #     -ovc lavc -lavcopts \
 #     vcodec=mpeg4:vbitrate=${VIDEO_BITRATE}:mbd=1:mv0:trell:v4mv:cbp:last_pred=3:predia=2:dia=2:vmax_b_frames=2:vb_strategy=1:precmp=2:cmp=2:subcmp=2:preme=2:qns=2:threads=${THREADS}"
 # TODO: Use mpv's *opts-add for 1/2-pass option
+#       This should work, when I unnderstand the docu right
+#        Common: --ovcopts b=${VIDEO_BITRATE},threads=${THREADS},preset=veryslow,trellis=1
+#                --oacopts b=${AUDIO_BITRATE}
+#        Pass 1: --ovcopts-add fastfirstpass=1,flags=+pass1
+#                --oacopts-add flags=+pass1
+#        Pass 2: --ovcopts-add flags=+pass2
+#                --oacopts-add flags=+pass2
 # Use libvorbis instead of mp3 for audio encoding
 MENCODER_OPTS_PASS1="${MENCODER_MOREOPTS} \
     --ovc libx264 --ovcopts b=${VIDEO_BITRATE},threads=${THREADS},preset=veryslow,trellis=1,fastfirstpass=1,flags=+pass1 \
