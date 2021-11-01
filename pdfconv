@@ -1,0 +1,155 @@
+#!/bin/bash
+# Function & Usage
+# - See help text
+#
+# Notes
+# -
+#
+# TODO
+# -
+#
+#  (c) 2021 Robert Lange (sd2k9@sethdepot.org)
+#  GNU General Public Licence applies
+
+# ------------------------------------------------------------------------------
+
+# *** Settings ***
+# Treat uninitialised variable as error and exit script
+set -u
+# Test mode: True when defined (only echo commands)
+declare TESTMODE
+# Program name
+readonly PRGNAME=${0##*/}
+# Mode, selected from command line
+declare MODE=""
+# File names to process, remaining command line after mode and options
+declare -a FILELIST
+# Input file to process
+declare INFILE
+
+
+# ------------------------------------------------------------------------------
+
+# *** Functions ***
+# Load shared functions
+readonly EXEC_DO_NO_ABORT_ON_ERROR=false
+source ${BASH_SOURCE[0]%/*}/bash-functions
+
+# *** Functions ***
+function help_text() {
+cat<<EOF
+Wrapper for pdf conversion tools, to expose a commong interface.
+
+Usage: $PRGNAME [OPTS] mode inputfile(s)
+* -h|--help: This screen"
+* -V|--version: Print program version and exit"
+* -t|--test|--dry-run: Do not execute commands, only echo"
+* mode: Operation mode, see below
+* inputfile: File to processs
+
+
+Operation Modes
+jpg, jpeg: Convert PDF to JPEG images
+images: Extract images from PDF (not implemented yet)
+    Requires package poppler-utils
+pdf: Convert image file(s) to PDF (not implemented yet)
+
+EOF
+}
+
+# Print Versionstring
+function versionstring () {
+declare -r VER=1.0.0
+cat<<EOF
+$PRGNAME version $VER
+(c) by Robert Lange (sd2k9@sethdepot.org)
+Licensed under the GNU General Public License
+
+EOF
+}
+
+# ------------------------------------------------------------------------------
+
+# *** Command line parsing
+get_options() {
+  local opt
+
+  while [ -n "$*" ] ; do
+      opt="$1"
+      shift
+      case $opt in
+          -t|--test|--dry-run)
+          # Test Mode
+       	  TESTMODE=1
+      	  ;;
+          -V|--version)
+          # Version output
+          versionstring
+          exit 0
+          ;;
+          -h|--help|'-?')
+          # Hilfetext
+          versionstring
+	  help_text
+          exit 0
+        ;;
+        jpg|jpeg)
+	  if [[ -n $MODE ]]; then
+  	     echo "Multiple mode statements! See help text for usage"
+   	     exit 1
+	  fi
+	  MODE="$opt"
+        ;;
+        *)
+          if [[ -n $MODE ]]; then
+              # Arguments after mode are expected to be file names
+              if [[ ! -f "$opt" ]]; then
+  	          echo "Error: File \"$1\" not existing!"
+                  exit 1
+              fi
+              # echo "add $opt"
+              FILELIST+=("$opt")
+          else
+              # Unknown Argument
+  	      echo "Unknown argument \"$opt\"! See help text for usage"
+   	      exit 1
+          fi
+          ;;
+      esac
+  done
+}
+
+
+# *** Call Command Line Parsing and Program execution
+# When no options supplied then call help
+if [ -z "${1:-}" ]; then
+    get_options "--help"
+else
+    get_options "$@"
+fi
+
+
+# ------------------------------------------------------------------------------
+
+# *** Now execute actions, or done above
+case $MODE in
+  jpg|jpeg)
+      for (( i=0; i<${#FILELIST[@]}; i++ ));
+      do
+          INFILE="${FILELIST[$i]}"
+          echo "Converting input PDF file \"$INFILE\" to jpe image file(s)"
+          exec_tool pdftoppm -jpeg "\"$INFILE\"" "\"${INFILE%.*}\""
+          echo
+      done
+  ;;
+  *)
+      # No mode
+      echo "No mode selected! See help text for usage"
+      exit 1
+  ;;
+esac
+
+
+# *** Done
+echo
+echo "Done"

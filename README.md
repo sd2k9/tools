@@ -179,3 +179,12 @@ Requires: auditd
 Auditd rules
 - -a always,exit -F arch=b32 -S execve -F euid=USERNAME -F key=KEYWORD
 - -a always,exit -F arch=b64 -S execve -F euid=USERNAME -F key=KEYWORD
+
+pdfconv
+-------
+Wrapper for pdf conversion tools, to expose a commong interface.
+
+Language: Bash
+
+Requires poppler-utils
+
