@@ -52,7 +52,7 @@ Operation Modes
 jpg, jpeg: Convert PDF to JPEG images
 images: Extract images from PDF (not implemented yet)
     Requires package poppler-utils
-pdf: Convert image file(s) to PDF (not implemented yet)
+pdf: Convert image file(s) to PDF
 
 EOF
 }
@@ -100,11 +100,18 @@ get_options() {
 	  fi
 	  MODE="$opt"
         ;;
+        pdf)
+	  if [[ -n $MODE ]]; then
+  	     echo "Multiple mode statements! See help text for usage"
+   	     exit 1
+	  fi
+	  MODE="$opt"
+        ;;
         *)
           if [[ -n $MODE ]]; then
               # Arguments after mode are expected to be file names
               if [[ ! -f "$opt" ]]; then
-  	          echo "Error: File \"$1\" not existing!"
+  	          echo "Error: File \"$opt\" not existing!"
                   exit 1
               fi
               # echo "add $opt"
@@ -141,6 +148,16 @@ case $MODE in
           exec_tool pdftoppm -jpeg "\"$INFILE\"" "\"${INFILE%.*}\""
           echo
       done
+  ;;
+  pdf)
+      OUTFILE="${FILELIST[0]%.*}.pdf"
+      # Correctly quote input files
+      files=
+      for (( i=0; i<${#FILELIST[@]}; i++ ));
+      do
+          files="$files \"${FILELIST[$i]}\""
+      done
+      exec_tool img2pdf --output \"${OUTFILE}\" $files
   ;;
   *)
       # No mode
