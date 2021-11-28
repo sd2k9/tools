@@ -70,6 +70,7 @@
 	plainstat = -c status.submodulesummary=false status
 	ls = ls-files
 	wdiff = diff --word-diff
+	wshow = show --word-diff
 	sdiff = diff --word-diff --staged
         # Improved Log
 	# loggraph = log --pretty=format:'%h %s' --graph
@@ -106,3 +107,5 @@
 	taglist = !"git for-each-ref refs/tags/ --format '%(objecttype) %(refname:short)' | while read ty name; do \
 	           [ $ty = tag ] && echo -n 'Annotated: '; \
                    [ $ty = commit ] && echo -n 'Lightweight: '; echo $name; done"
+        # Pager without color and with line output, for example when called from within emacs
+        ngrep = !git --no-pager grep -n
