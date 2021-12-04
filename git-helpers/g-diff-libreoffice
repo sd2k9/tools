@@ -9,6 +9,8 @@
 set -u
 # Test mode: True when defined (only echo commands)
 TESTMODE=
+# Do not abort on errors
+EXEC_DO_NO_ABORT_ON_ERROR=true
 
 # ------------------------------------------------------------------------------
 
