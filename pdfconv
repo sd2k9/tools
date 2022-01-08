@@ -52,20 +52,18 @@ Operation Modes
 jpg, jpeg: Convert PDF to JPEG images
 images: Extract images from PDF (not implemented yet)
     Requires package poppler-utils
-pdf: Convert image or text file(s) to PDF
-    Text: Create one PDF for each input file
-          Requires libreoffice
-    Images: Combine in one PDF
+pdf: Combine image, text and PDF file(s) to PDF
     Files ending with "txt" are treated as text,
-    everything else as image
-    Do not mix text and image files
-
+    "pdf" as PDFs, everything else as image
+    Text: Requires libreoffice
+    Note: Intermediate files (from mixed conversion)
+          must be removed manually
 EOF
 }
 
 # Print Versionstring
 function versionstring () {
-declare -r VER=1.0.0
+declare -r VER=1.1.0
 cat<<EOF
 $PRGNAME version $VER
 (c) by Robert Lange (sd2k9@sethdepot.org)
@@ -156,28 +154,101 @@ case $MODE in
       done
   ;;
   pdf)
-      # Determine operation by first file name ending
+      # First check: Only Images? Only PDF files? Or mixed?
+      declare filetypes
+      # Starting point is file extension of first file
       case ${FILELIST[0]##*.} in
+          pdf)
+              filetypes="pdf"
+          ;;
           txt)
-              # Assuming text files
-              for (( i=0; i<${#FILELIST[@]}; i++ ));
-              do
-                  INFILE="${FILELIST[$i]}"
-                  echo "Converting input text file \"$INFILE\" to PDF file"
-                  exec_tool libreoffice --convert-to pdf "\"$INFILE\""
-                  echo
-              done
+              filetypes="mix"
           ;;
           *)
-              # Assuming images
-              OUTFILE="${FILELIST[0]%.*}.pdf"
-              # Correctly quote input files
-              files=
-              for (( i=0; i<${#FILELIST[@]}; i++ ));
-              do
-                  files="$files \"${FILELIST[$i]}\""
-              done
+              # Images
+              filetypes="img"
+          ;;
+      esac
+      # Now check other files
+      for (( i=1; i<${#FILELIST[@]}; i++ ));
+      do
+          case ${FILELIST[$i]##*.} in
+              pdf)
+                  if [[ $filetypes != "pdf" ]]; then
+                      # Reset and done
+                      filetypes="mix"
+                      break
+                  fi
+              ;;
+              txt)
+                  # Reset and done
+                  filetypes="mix"
+                  break
+              ;;
+              *)
+                  # Images
+                  if [[ $filetypes != "img" ]]; then
+                      # Reset and done
+                      filetypes="mix"
+                      break
+                  fi
+              ;;
+          esac
+      done
+
+      # For mixed file list preconversion is needed
+      if [[ $filetypes == "mix" ]]; then
+          # Resulting mode is PDF
+          filetypes=pdf
+          # Convert Non-PDF files to PDF
+          for (( i=0; i<${#FILELIST[@]}; i++ ));
+          do
+              # Input file name
+              INFILE="${FILELIST[$i]}"
+              # Replace suffix with pdf
+              OUTFILE="${FILELIST[$i]%.*}.pdf"
+              # Decide by suffix
+              case ${FILELIST[$i]##*.} in
+                  pdf)
+                  # Do nothing
+                  ;;
+                  txt)
+                      echo "Converting input text file \"$INFILE\" to PDF file"
+                      exec_tool libreoffice --convert-to pdf "\"$INFILE\""
+                      # Update name in file array
+                      FILELIST[$i]="$OUTFILE"
+                      echo
+                      ;;
+                  *)
+                      # Image
+                      # And convert
+                      exec_tool img2pdf --output \"${OUTFILE}\" \"${INFILE}\"
+                      # Update name in file array
+                      FILELIST[$i]="$OUTFILE"
+                      ;;
+              esac
+          done
+      fi
+
+      # Now build the result file list
+      OUTFILE="${FILELIST[0]%.*}-output.pdf"
+      # Correctly quote input files
+      files=
+      for (( i=0; i<${#FILELIST[@]}; i++ ));
+      do
+          files="$files \"${FILELIST[$i]}\""
+      done
+      # Execute right command
+      case $filetypes in
+          pdf)
+              exec_tool pdftk $files cat output \"${OUTFILE}\"
+          ;;
+          img)
               exec_tool img2pdf --output \"${OUTFILE}\" $files
+          ;;
+          *)
+  	      echo "Unknown file type \"$filetypes\"! Internal error!"
+              exit 1
           ;;
       esac
   ;;
