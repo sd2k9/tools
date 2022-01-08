@@ -52,7 +52,13 @@ Operation Modes
 jpg, jpeg: Convert PDF to JPEG images
 images: Extract images from PDF (not implemented yet)
     Requires package poppler-utils
-pdf: Convert image file(s) to PDF
+pdf: Convert image or text file(s) to PDF
+    Text: Create one PDF for each input file
+          Requires libreoffice
+    Images: Combine in one PDF
+    Files ending with "txt" are treated as text,
+    everything else as image
+    Do not mix text and image files
 
 EOF
 }
@@ -150,14 +156,30 @@ case $MODE in
       done
   ;;
   pdf)
-      OUTFILE="${FILELIST[0]%.*}.pdf"
-      # Correctly quote input files
-      files=
-      for (( i=0; i<${#FILELIST[@]}; i++ ));
-      do
-          files="$files \"${FILELIST[$i]}\""
-      done
-      exec_tool img2pdf --output \"${OUTFILE}\" $files
+      # Determine operation by first file name ending
+      case ${FILELIST[0]##*.} in
+          txt)
+              # Assuming text files
+              for (( i=0; i<${#FILELIST[@]}; i++ ));
+              do
+                  INFILE="${FILELIST[$i]}"
+                  echo "Converting input text file \"$INFILE\" to PDF file"
+                  exec_tool libreoffice --convert-to pdf "\"$INFILE\""
+                  echo
+              done
+          ;;
+          *)
+              # Assuming images
+              OUTFILE="${FILELIST[0]%.*}.pdf"
+              # Correctly quote input files
+              files=
+              for (( i=0; i<${#FILELIST[@]}; i++ ));
+              do
+                  files="$files \"${FILELIST[$i]}\""
+              done
+              exec_tool img2pdf --output \"${OUTFILE}\" $files
+          ;;
+      esac
   ;;
   *)
       # No mode
