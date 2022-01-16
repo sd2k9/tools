@@ -58,6 +58,7 @@ pdf: Combine image, text and PDF file(s) to PDF
     Text: Requires libreoffice
     Note: Intermediate files (from mixed conversion)
           must be removed manually
+txt, text: Extract text from PDF
 EOF
 }
 
@@ -105,6 +106,13 @@ get_options() {
 	  MODE="$opt"
         ;;
         pdf)
+	  if [[ -n $MODE ]]; then
+  	     echo "Multiple mode statements! See help text for usage"
+   	     exit 1
+	  fi
+	  MODE="$opt"
+        ;;
+        txt|text)
 	  if [[ -n $MODE ]]; then
   	     echo "Multiple mode statements! See help text for usage"
    	     exit 1
@@ -251,6 +259,15 @@ case $MODE in
               exit 1
           ;;
       esac
+  ;;
+  txt|text)
+      for (( i=0; i<${#FILELIST[@]}; i++ ));
+      do
+          INFILE="${FILELIST[$i]}"
+          echo "Converting input PDF file \"$INFILE\" to text file"
+          exec_tool pdftotext "\"$INFILE\"" "\"${INFILE%.*}.txt\""
+          echo
+      done
   ;;
   *)
       # No mode
