@@ -50,7 +50,7 @@ Usage: $PRGNAME [OPTS] mode inputfile(s)
 
 Operation Modes
 jpg, jpeg: Convert PDF to JPEG images
-images: Extract images from PDF (not implemented yet)
+images: Extract images from PDF
     Requires package poppler-utils
 pdf: Combine image, text and PDF file(s) to PDF
     Files ending with "txt" are treated as text,
@@ -113,6 +113,13 @@ get_options() {
 	  MODE="$opt"
         ;;
         txt|text)
+	  if [[ -n $MODE ]]; then
+  	     echo "Multiple mode statements! See help text for usage"
+   	     exit 1
+	  fi
+	  MODE="$opt"
+        ;;
+        images)
 	  if [[ -n $MODE ]]; then
   	     echo "Multiple mode statements! See help text for usage"
    	     exit 1
@@ -259,6 +266,15 @@ case $MODE in
               exit 1
           ;;
       esac
+  ;;
+  images)
+      for (( i=0; i<${#FILELIST[@]}; i++ ));
+      do
+          INFILE="${FILELIST[$i]}"
+          echo "Extract images from PDF file \"$INFILE\""
+          exec_tool pdfimages -all "\"$INFILE\"" "\"${INFILE%.*}-img\""
+          echo
+      done
   ;;
   txt|text)
       for (( i=0; i<${#FILELIST[@]}; i++ ));
