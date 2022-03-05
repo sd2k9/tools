@@ -188,3 +188,11 @@ Language: Bash
 
 Requires poppler-utils
 
+xscreensaver-inhibit
+--------------------
+Script to keep mouse pointer moving to prevent the screensaver from activating.
+
+Language: Bash
+
+Requires xdotool
+
