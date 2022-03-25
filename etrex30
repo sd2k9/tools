@@ -105,7 +105,12 @@ function exec_ln() {
     abort_on_error $?
     shift
     local ofil
-    ofil="$1"
+    if [[ "$1" =~ / ]] ; then
+        ofil="$1"
+    else
+        # For pure file name add a path component for following linking
+        ofil="./$1"
+    fi
     shift
     # Use the file verbatim; make link for it - need to change to target directory
     exec_tool pushd ${ofil%/*}
@@ -286,7 +291,7 @@ track|puttrack)
        ROUTENAME=$(filename_base ${COMMAND_1P})
    fi
    # Prepare for Garmin - use intermediate temporary file
-   INFILE=$(tempfile --suffix=.gpx)
+   INFILE=$(mktemp --suffix=.gpx  etrexXXXX)
    # When required decompress input file
    if [ "${COMMAND_1P##*.}" == "xz" ]; then
        echo "Extracting compressed track file ..."
@@ -327,6 +332,9 @@ track|puttrack)
    # echo "---"
    # cat <<< $GPXFILE
    # echo "---"
+
+   # Remove temporary file again
+   exec_tool rm "$INFILE"
    ;;
 
 # *** Pointdownload
