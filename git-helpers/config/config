@@ -72,7 +72,12 @@
 	wdiff = diff --word-diff
 	wshow = show --word-diff
 	sdiff = diff --word-diff --staged
-        # Improved Log
+        # Just show the commit-hash
+        refshow = rev-parse
+        # Show the current commit-hash  and copy it to the middle-click clipboard
+        refcur = !"refcur=$(git refshow @); echo Put to clipboard: $refcur; echo -n $refcur | xclip -selection primary"
+        # Reverse Log
+        rlog = log --reverse
 	# loggraph = log --pretty=format:'%h %s' --graph
 	loggraph = log --all --graph --pretty=format:'%C(auto)%h%C(auto)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit --date=relative
 	# List all branches including unnamned ones as graph
@@ -87,6 +92,8 @@
 	mergeff = merge --ff-only
 	# Push without triggering Gitlab CI pipeline run
 	pushnoci = push -o ci.skip
+	# Push new branch
+	pushnewbranch = !git push --set-upstream origin $(git symbolic-ref --short HEAD)
 	# Merge a branch (external script)
 	mergebranch = !${HOME}/bin/public/git-helpers/g-mergebranch
 	# Clean (Remove) branch names after a Gitlab merge, Argument is branch name
