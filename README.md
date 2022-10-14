@@ -188,6 +188,14 @@ Language: Bash
 
 Requires poppler-utils
 
+pdf-add-pagenumbers
+-------------------
+Add page numbers to PDF pages
+
+Language: Bash
+
+Requires enscript, pdftk, ps2pdf
+
 xscreensaver-inhibit
 --------------------
 Script to keep mouse pointer moving to prevent the screensaver from activating.
@@ -195,4 +203,3 @@ Script to keep mouse pointer moving to prevent the screensaver from activating.
 Language: Bash
 
 Requires xdotool
-

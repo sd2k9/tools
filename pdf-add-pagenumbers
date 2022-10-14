@@ -1,0 +1,177 @@
+#!/bin/bash
+# Function:
+# - Add page numbers to PDF pages
+#
+# Usage
+# - See help text
+#
+# Notes
+# - Source: https://unix.stackexchange.com/questions/693863/add-page-numbers-to-pdf
+# - Another approach - instead of enscript - would be using pdflatex
+#   \documentclass[twoside, a4paper, 12pt]{scrartcl}
+#   \usepackage[final]{pdfpages}
+#   \usepackage{changepage}
+#   \usepackage{fancyhdr}
+#
+#   \setlength\topmargin{-0.675in}
+#   \setlength\textheight{7.0in}
+#   \setlength\textwidth{7.0in}
+#   \setlength\oddsidemargin{-0.25in}
+#   \setlength\evensidemargin{-0.25in}
+#
+#   \strictpagecheck
+#
+#   % \fancypagestyle{mystyle}{%
+#   % \fancyhf{}
+#   % \fancyhead[LO,RE]{\small\thepage}
+#   % }
+#   \pagestyle{fancy}
+#   \rfoot{\Large\thepage}
+#   \cfoot{}
+#   \renewcommand {\headrulewidth}{0pt}
+#   \renewcommand {\footrulewidth}{0pt}
+#
+#   % set margins for headers, won't shrink included pdfs
+#   % you can remove the topmargin/oddsidemargin/evensidemargin lines
+#   \usepackage[margin=1in,includehead,includefoot]{geometry}
+#
+#   \begin{document}
+#     % \includepdfset{pagecommand=\thispagestyle{fancy}}
+#     % \includepdf[fitpaper=true,scale=0.98,pages=-]{example.pdf}
+#     \includepdf[pages=-,pagecommand={\thispagestyle{mystyle}}]{i-need-numbers.pdf}
+#
+#   \end{document}
+#
+# TODO
+# -
+#
+#  Copyright (c) 2022 Robert Lange (sd2k9@sethdepot.org)
+#  GNU General Public Licence applies
+
+# ------------------------------------------------------------------------------
+
+# *** Settings ***
+# Treat uninitialised variable as error and exit script
+set -u
+# Test mode: True when defined (only echo commands)
+declare TESTMODE
+# Program name
+readonly PRGNAME=${0##*/}
+# Input and output file names
+declare infile=""
+declare outfile=""
+
+# ------------------------------------------------------------------------------
+
+# *** Functions ***
+# Load shared functions
+readonly EXEC_DO_NO_ABORT_ON_ERROR=false
+source ${BASH_SOURCE[0]%/*}/bash-functions
+
+# *** Functions ***
+function help_text() {
+cat<<EOF
+Add page numbers to PDF pages
+
+Usage: $PRGNAME inputfile outputfile
+* -h|--help: This screen
+* -V|--version: Print program version and exit
+* -t|--test|--dry-run: Do not execute commands
+EOF
+}
+
+# Print Versionstring
+function versionstring () {
+declare -r VER=0.0.1
+cat<<EOF
+$PRGNAME version $VER
+(c) by Robert Lange (sd2k9@sethdepot.org)
+Licensed under the GNU General Public License
+
+EOF
+}
+
+# ------------------------------------------------------------------------------
+
+# *** Command line parsing
+get_options() {
+  local opt
+
+  while [[ -n "$*" ]] ; do
+      opt="$1"
+      shift
+      case $opt in
+       -t|--test|--dry-run)
+          # Test Mode
+       	  TESTMODE=1
+      	  ;;
+       -V|--version)
+          # Version output
+          versionstring
+          exit 0
+          ;;
+       -h|--help|'-?')
+          # Hilfetext
+          versionstring
+	  help_text
+          exit 0
+          ;;
+       *)
+          # Arguments
+           if [[ -z "$infile" ]]; then
+               infile="$opt"
+           elif [[ -z "$outfile" ]]; then
+               outfile="$opt"
+           else
+               echo "Too many arguments! See help text for usage"
+               exit 1
+           fi
+  	  ;;
+      esac
+  done
+}
+
+
+# *** Command Line Parsing
+# When no options supplied then call help
+if [[ -z "${1:-}" ]]; then
+    get_options "--help"
+else
+    get_options "$@"
+fi
+
+# *** Sanity Checks ***
+# Parameter
+if [[ -z "$infile" ]]; then
+   echo "No input file name suppled! See help text for usage"
+   exit 1
+fi
+if [[ -z "$outfile" ]]; then
+   echo "No output file name suppled! See help text for usage"
+   exit 1
+fi
+if [[ ! -f "$infile" ]]; then
+   echo "Input file not found!"
+   exit 1
+fi
+if [[ -f "$outfile" ]]; then
+   echo "Output file already existing!"
+   exit 1
+fi
+
+
+
+# ------------------------------------------------------------------------------
+
+# *** Now execute actions, or done above
+echo "Adding page numbers to $infile, storing as $outfile"
+
+if [[ -z "${TESTMODE:-}" ]]; then
+    readonly pagenum=$(pdftk "$infile" dump_data | grep "NumberOfPages" | cut -d":" -f2)
+    enscript -L1 --header='||Page $% of $=' --output - < <(for i in $(seq "$pagenum"); do echo; done) | \
+        ps2pdf - | pdftk "$infile" multistamp - output "$outfile"
+fi
+
+# *** Done
+echo
+echo "Done"
