@@ -237,6 +237,8 @@ case $MODE in
                   *)
                       # Image
                       # And convert
+                      # Add "--colorspace RGB" to resolve error
+                      # img2pdf ERROR:root:error: Cannot have Palette images with ICC profile 
                       exec_tool img2pdf --output \"${OUTFILE}\" \"${INFILE}\"
                       # Update name in file array
                       FILELIST[$i]="$OUTFILE"
