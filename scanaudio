@@ -129,12 +129,10 @@ If a binary option is issued, then it means "set". The long form of this
 options can be negated by prepending "no" or "no-", then the option
 means "unset".
 
-WARNING
-
-scanaudio is a Alpha - so expect the worst! Of course it should not
-destroy your hard drive or delete other files. But be cautionuous - if you use
-this script it can happen to you, even if it never occured at my system.
-scanaudio is written in perl and placed under the GNU General Public License v3.
+WARNINGS
+- scanaudio is Alpha, nothing ins guaranteed
+- scanaudio cannot correctly deal with file links
+- scanaudio is written in perl and placed under the GNU General Public License v3.
 EOF
 
 
