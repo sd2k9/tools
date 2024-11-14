@@ -20,8 +20,8 @@ DIRMNGR_CMD=dirmngr
 # Now start dirmngr with all supplied options
 $DIRMNGR_CMD "$@" &
 
-# Wait
-sleep $TIME_END
+# Wait in subprocess, to not block caller
+( sleep $TIME_END
 
 # Now kill it when still running
 if [[ $(pgrep -c $DIRMNGR_CMD) ]]; then
@@ -29,3 +29,4 @@ if [[ $(pgrep -c $DIRMNGR_CMD) ]]; then
    # xmessage  $0: Time is up - Killing dirmngr
    gpgconf --kill dirmngr
 fi
+) &
