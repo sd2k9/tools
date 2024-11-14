@@ -23,7 +23,9 @@ while true
 do
     for ANGLE in 0 90 180 270
     do
-        xdotool mousemove_relative --polar $ANGLE $LENGTH
+        # <2024-10-05> Does not work, try instead direct xscreensaver stimulation
+        # xdotool mousemove_relative --polar $ANGLE $LENGTH
+        xscreensaver-command --deactivate
         sleep $DELAY
     done
 done
