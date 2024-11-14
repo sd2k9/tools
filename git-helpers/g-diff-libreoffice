@@ -49,7 +49,7 @@ REMOTE="$2"
 # ------------------------------------------------------------------------------
 
 # *** Now execute actions
-echo "Invoking libreoffice with post-diff file, select \"Edit/Compare Document\" with file"
+echo "Invoking libreoffice with post-diff file, select \"Edit/Track Changes/Compare Document\" with file"
 echo "   $LOCAL"
 echo
 

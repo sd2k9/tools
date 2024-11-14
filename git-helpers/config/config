@@ -65,6 +65,7 @@
 	so = switch
 	ci = commit
 	eci = -c core.editor=emacs commit
+	s = status
 	stat = status
 	# Status without submodule summary (sometimes too much output)
 	plainstat = -c status.submodulesummary=false status
