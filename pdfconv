@@ -163,7 +163,7 @@ case $MODE in
       for (( i=0; i<${#FILELIST[@]}; i++ ));
       do
           INFILE="${FILELIST[$i]}"
-          echo "Converting input PDF file \"$INFILE\" to jpe image file(s)"
+          echo "Converting input PDF file \"$INFILE\" to jpg image file(s)"
           exec_tool pdftoppm -jpeg "\"$INFILE\"" "\"${INFILE%.*}\""
           echo
       done
