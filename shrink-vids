@@ -30,8 +30,6 @@
 # Mencoder
 MENCODER=mpv
 # Encoding options are set below
-# Movie Identification - use script from mpv
-MIDENTIFY="midentify"
 # Number of threads to use for encoding
 # Default use number of processors in system
 THREADS=$(grep "processor" /proc/cpuinfo | wc -l)
@@ -55,7 +53,7 @@ model: Bitrate presets for encoding
 inputfile: File to shrink
 outputfile.mp4: Resulting file, Format is MP4
 
-Used commands: $MENCODER $MPLAYER
+Used commands: $MENCODER
 
 EOF
 }
@@ -201,8 +199,9 @@ fi
 # *** Now execute the action
 
 # *** Determine input material
-VIDEO_WIDTH=$($MIDENTIFY "$INFILE" 2> /dev/null |grep "^width" | cut -c 7-)
-
+# Movie Identification with mpv
+readonly VIDEO_WIDTH=$(mpv --term-playing-msg='width: ${width}' \
+          --vo=null --ao=null --frames=1 --quiet --no-cache --no-config "$INFILE" | grep "^width" | cut -c 8-)
 
 # *** Set encoding options
 # Additional encoder options
@@ -350,11 +349,11 @@ fi
 #                --oacopts-add flags=+pass2
 # Use libvorbis instead of mp3 for audio encoding
 MENCODER_OPTS_PASS1="${MENCODER_MOREOPTS} \
-    --ovc libx264 --ovcopts b=${VIDEO_BITRATE},threads=${THREADS},preset=veryslow,trellis=1,fastfirstpass=1,flags=+pass1 \
-    --audio-channels mono --oac libvorbis --oacopts b=${AUDIO_BITRATE},flags=+pass1"
+    --ovc=libx264 --ovcopts=b=${VIDEO_BITRATE},threads=${THREADS},preset=veryslow,trellis=1,fastfirstpass=1,flags=+pass1 \
+    --audio-channels=mono --oac=libvorbis --oacopts=b=${AUDIO_BITRATE},flags=+pass1"
 MENCODER_OPTS_PASS2="${MENCODER_MOREOPTS} \
-    --ovc libx264 --ovcopts b=${VIDEO_BITRATE},threads=${THREADS},preset=veryslow,trellis=1,flags=+pass2 \
-    --audio-channels mono --oac libvorbis --oacopts b=${AUDIO_BITRATE},flags=+pass2"
+    --ovc=libx264 --ovcopts=b=${VIDEO_BITRATE},threads=${THREADS},preset=veryslow,trellis=1,flags=+pass2 \
+    --audio-channels=mono --oac=libvorbis --oacopts=b=${AUDIO_BITRATE},flags=+pass2"
 
 # *** Execute shrink ***
 echo
