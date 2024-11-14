@@ -423,7 +423,7 @@ osm|putosm)
    # Get a random number for the map name; each map need an unique number with 8 digits
    MAPNUM="$(printf  '%.4d' $(( $RANDOM % 10000 )) )$(printf  '%.4d' $(( $RANDOM % 10000 )) )"
    exec_tool mkgmap -n $MAPNUM --description=\"$OSM_TITLE\" --latin1 --gmapsupp \
-      	               --remove-short-arcs=3 --route \
+      	               --reduce-point-density=4 --reduce-point-density-polygon=8 --route \
     		       "$INFILE"
    if [ -z "$TESTMODE" -a ! -f "$MKGMAP_OUT" ]; then
      echo "File $MKGMAP_OUT did not got created! Something went wrong!"
