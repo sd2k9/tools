@@ -1,31 +1,25 @@
 #!/bin/bash
 #
-# Script to keep mouse pointer moving so that, for example, Suspend to RAM timeout does not occur.
-# Source: https://fitzcarraldoblog.wordpress.com/2018/08/06/how-to-move-a-mouse-pointer-automatically-in-linux-to-simulate-user-activity/
-#
-# The mouse pointer will move around its current position on the screen, i.e. around any position
-# on the screen where you place the pointer. However, if you prefer it to move around the centre
-# of the screen then change mousemove_relative to mousemove in the xdotool command below.
-#
-# Set LENGTH to 0 if you do not want the mouse pointer to actually move.
-# Set LENGTH to 1 if you want the mouse pointer to move just a tiny fraction.
-# Set LENGTH to e.g. 100 if you want to see more easily the mouse pointer move.
-readonly LENGTH=10
-#
-# Set DELAY to the desired number of seconds between each move of the mouse pointer.
+# Script to keep xscreensaver inactive, and also kill/resume another process at the same time.
+
+# Reasonable DELAY to keep xscreensaver from activating
 readonly DELAY=1m
 
+# Programm to kill/resume
+readonly KILL_PROG=workrave
 
-echo "Keeping screensaver from activation by wrigglyng the mouse every $DELAY ..."
+echo "Killing $KILL_PROG ..."
+pkill -u $USER $KILL_PROG
+
+# Installing trap to restart program
+trap "($KILL_PROG &); exit" SIGINT
+
+echo "Keeping screensaver from activation ..."
 echo "Abort with Ctrl+C"
 
 while true
 do
-    for ANGLE in 0 90 180 270
-    do
-        # <2024-10-05> Does not work, try instead direct xscreensaver stimulation
-        # xdotool mousemove_relative --polar $ANGLE $LENGTH
         xscreensaver-command --deactivate
         sleep $DELAY
-    done
 done
+
