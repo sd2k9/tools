@@ -52,10 +52,8 @@ Operation Modes
 jpg, jpeg: Convert PDF to JPEG images
 images: Extract images from PDF
     Requires package poppler-utils
-pdf: Combine image, text and PDF file(s) to PDF
-    Files ending with "txt" are treated as text,
-    "pdf" as PDFs, everything else as image
-    Text: Requires libreoffice
+pdf: Combine image, txt, odt and PDF file(s) to PDF
+    txt, odt: Requires libreoffice
     Note: Intermediate files (from mixed conversion)
           must be removed manually
 txt, text: Extract text from PDF
@@ -176,7 +174,7 @@ case $MODE in
           pdf)
               filetypes="pdf"
           ;;
-          txt)
+          txt|odt)
               filetypes="mix"
           ;;
           *)
@@ -195,7 +193,7 @@ case $MODE in
                       break
                   fi
               ;;
-              txt)
+              txt|odt)
                   # Reset and done
                   filetypes="mix"
                   break
@@ -227,8 +225,8 @@ case $MODE in
                   pdf)
                   # Do nothing
                   ;;
-                  txt)
-                      echo "Converting input text file \"$INFILE\" to PDF file"
+                  txt|odt)
+                      echo "Converting input file \"$INFILE\" to PDF file"
                       exec_tool libreoffice --convert-to pdf "\"$INFILE\""
                       # Update name in file array
                       FILELIST[$i]="$OUTFILE"
