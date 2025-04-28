@@ -206,7 +206,7 @@ exec_tool() {
 # Prefill last variable, lotherwise following test will fail
 OUTFILE=""
 # When no options supplied then call help
-if [ -z "$1" ]; then
+if [ -z "${1:-}" ]; then
     get_options "--help"
 else
     get_options "$@"
@@ -214,7 +214,7 @@ fi
 
 
 # No or wrong commands supplied
-if [[ -z ${INFILE2} ]]; then
+if [[ -z ${INFILE2:-} ]]; then
     echo "Wrong number of command line options!"
     echo
     help_text
