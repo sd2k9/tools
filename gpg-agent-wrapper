@@ -27,6 +27,6 @@ $AGENT_CMD "$@" &
 if [[ $(pgrep -c $AGENT_CMD) ]]; then
    # Debug output (blocking)
    # xmessage  $0: Time is up - Killing gpg-agent
-   gpgconf --kill gpg-agent
+   gpgconf --kill $AGENT_CMD
 fi
 ) &

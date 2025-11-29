@@ -1,0 +1,32 @@
+#!/bin/bash
+# Wrapper for gnupg2's keyboxd (gpg public key material service daemon) to kill itself after 1 min.
+# Otherwise it will linger forever around in memory, which I don't like.
+#
+# Enable in ~/.gnupg/gpg.conf:
+# keyboxd-program PREFIX/keyboxd-wrapper
+
+
+# Settings
+# Timeout in seconds
+TIME_END=60
+# Debug: 10 seconds
+# TIME_END=10
+# Keyboxd command
+KEYBOXD_CMD=keyboxd
+
+# Debug output
+# xmessage keyboxd "$@" &
+
+# Now start keyboxd with all supplied options
+$KEYBOXD_CMD "$@" &
+
+# Wait in subprocess, to not block caller
+( sleep $TIME_END
+
+# Now kill it when still running
+if [[ $(pgrep -c $KEYBOXD_CMD) ]]; then
+   # Debug output
+   # xmessage  $0: Time is up - Killing keyboxd
+   gpgconf --kill $KEYBOXD_CMD
+fi
+) &

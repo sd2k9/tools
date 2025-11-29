@@ -27,6 +27,6 @@ $DIRMNGR_CMD "$@" &
 if [[ $(pgrep -c $DIRMNGR_CMD) ]]; then
    # Debug output
    # xmessage  $0: Time is up - Killing dirmngr
-   gpgconf --kill dirmngr
+   gpgconf --kill $DIRMNGR_CMD
 fi
 ) &
